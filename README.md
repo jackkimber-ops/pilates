@@ -151,7 +151,10 @@ This is a Next.js App Router app with server rendering, Prisma, PostgreSQL, and 
 
 ### Simplest production database
 
-The simplest option is Vercel Postgres or Neon Postgres.
+The simplest options are:
+
+- Neon Postgres (already connected)
+- Supabase Postgres (now connected)
 
 Set:
 
@@ -159,6 +162,29 @@ Set:
 - `DIRECT_URL` to the direct connection string for Prisma migrations
 
 If your provider only gives one Postgres URL, use the same value for both.
+
+### Supabase (connected option)
+
+Supabase has already been added to this Vercel project as a connected integration resource.
+
+If you want to run the app on Supabase DB instead of Neon, map:
+
+- `DATABASE_URL` = `SUPABASE_POSTGRES_PRISMA_URL`
+- `DIRECT_URL` = `SUPABASE_POSTGRES_URL_NON_POOLING`
+
+Then run migrations + seed against Supabase:
+
+```bash
+npm run db:migrate:deploy
+npm run db:seed
+```
+
+Recommended rollout:
+
+1. update `DATABASE_URL` and `DIRECT_URL` in Vercel Production
+2. run `npm run db:migrate:deploy`
+3. run `npm run db:seed` (if this environment is for seeded admin/demo data)
+4. verify `/api/health` and `/login`
 
 ### Environment variables in Vercel
 
