@@ -1,0 +1,471 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  ADMIN
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ClassCategory {
+  GROUP
+  PRIVATE
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  PROMPTPAY
+  OTHER
+}
+
+enum SingleClassPurchaseStatus {
+  UNUSED
+  USED
+  EXPIRED
+  CANCELLED
+}
+
+enum SessionStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum BookingStatus {
+  BOOKED
+  ATTENDED
+  CANCELLED
+  LATE_CANCEL
+  NO_SHOW
+}
+
+enum PaymentSourceType {
+  PACKAGE
+  SINGLE
+  TRIAL
+  OVERRIDE
+}
+
+enum CustomerPackageSourceType {
+  PACKAGE_SALE
+  IMPORTED
+}
+
+enum CustomerPackageTransactionType {
+  OPENING_SNAPSHOT
+  PACKAGE_SALE
+  IMPORTED_BALANCE
+  USAGE
+  RESTORE
+  ADJUSTMENT
+}
+
+enum CustomerTrialPackageItemTransactionType {
+  OPENING_SNAPSHOT
+  TRIAL_SALE
+  USAGE
+  RESTORE
+  ADJUSTMENT
+}
+
+enum Weekday {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+model User {
+  id                      String                                @id @default(cuid())
+  name                    String
+  email                   String                                @unique
+  passwordHash            String
+  role                    UserRole                              @default(ADMIN)
+  authSessions            AdminSession[]
+  adjustments             PackageAdjustment[]                   @relation("AdjustmentByUser")
+  bookingReversals        Booking[]                             @relation("BookingReversedByUser")
+  customerPackageEvents   CustomerPackageTransaction[]          @relation("CustomerPackageTransactionByUser")
+  customerTrialItemEvents CustomerTrialPackageItemTransaction[] @relation("CustomerTrialItemTransactionByUser")
+  auditLogs               AuditLog[]
+  createdAt               DateTime                              @default(now())
+  updatedAt               DateTime                              @updatedAt
+}
+
+model AdminSession {
+  id               String   @id @default(cuid())
+  sessionTokenHash String   @unique
+  expiresAt        DateTime
+  userId           String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model Customer {
+  id                   String                 @id @default(cuid())
+  fullName             String
+  phone                String?
+  email                String?                @unique
+  notes                String?
+  tags                 String[]               @default([])
+  status               CustomerStatus         @default(ACTIVE)
+  packages             CustomerPackage[]
+  trialPackages        CustomerTrialPackage[]
+  bookings             Booking[]
+  singleClassPurchases SingleClassPurchase[]
+  recurringRules       RecurringBookingRule[]
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  @@index([fullName])
+  @@index([status, fullName])
+}
+
+model Instructor {
+  id             String                 @id @default(cuid())
+  fullName       String
+  active         Boolean                @default(true)
+  sessions       Session[]
+  recurringRules RecurringBookingRule[]
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  @@index([active, fullName])
+}
+
+model ClassType {
+  id                 String                     @id @default(cuid())
+  name               String                     @unique
+  category           ClassCategory
+  durationMinutes    Int                        @default(60)
+  defaultSinglePrice Decimal                    @db.Decimal(12, 2)
+  maxCapacity        Int                        @default(6)
+  color              String
+  active             Boolean                    @default(true)
+  packageTemplates   PackageTemplate[]
+  customerPackages   CustomerPackage[]
+  trialTemplateItems TrialPackageTemplateItem[]
+  customerTrialItems CustomerTrialPackageItem[]
+  sessions           Session[]
+  singlePurchases    SingleClassPurchase[]
+  recurringRules     RecurringBookingRule[]
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+
+  @@index([active, category])
+}
+
+model PackageTemplate {
+  id               String            @id @default(cuid())
+  classTypeId      String
+  name             String            @unique
+  category         ClassCategory
+  sessionCount     Int
+  validityMonths   Int
+  regularPrice     Decimal           @db.Decimal(12, 2)
+  packagePrice     Decimal           @db.Decimal(12, 2)
+  active           Boolean           @default(true)
+  classType        ClassType         @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
+  customerPackages CustomerPackage[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@unique([classTypeId, sessionCount])
+  @@index([active, category, classTypeId])
+}
+
+model TrialPackageTemplate {
+  id                    String                     @id @default(cuid())
+  name                  String                     @unique
+  price                 Decimal                    @db.Decimal(12, 2)
+  active                Boolean                    @default(true)
+  notes                 String?
+  items                 TrialPackageTemplateItem[]
+  customerTrialPackages CustomerTrialPackage[]
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @updatedAt
+
+  @@index([active, name])
+}
+
+model TrialPackageTemplateItem {
+  id                     String               @id @default(cuid())
+  trialPackageTemplateId String
+  classTypeId            String
+  quantity               Int
+  createdAt              DateTime             @default(now())
+  trialPackageTemplate   TrialPackageTemplate @relation(fields: [trialPackageTemplateId], references: [id], onDelete: Cascade)
+  classType              ClassType            @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
+
+  @@unique([trialPackageTemplateId, classTypeId])
+  @@index([classTypeId])
+}
+
+model CustomerPackage {
+  id                String                       @id @default(cuid())
+  customerId        String
+  packageTemplateId String?
+  classTypeId       String
+  sourceType        CustomerPackageSourceType    @default(PACKAGE_SALE)
+  category          ClassCategory
+  originalCredits   Int
+  remainingCredits  Int
+  purchaseDate      DateTime
+  expiryDate        DateTime?
+  amountPaid        Decimal                      @default(0) @db.Decimal(12, 2)
+  paymentMethod     PaymentMethod?
+  notes             String?
+  active            Boolean                      @default(true)
+  customer          Customer                     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  classType         ClassType                    @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
+  packageTemplate   PackageTemplate?             @relation(fields: [packageTemplateId], references: [id], onDelete: Restrict)
+  adjustments       PackageAdjustment[]
+  bookings          Booking[]
+  transactions      CustomerPackageTransaction[]
+  createdAt         DateTime                     @default(now())
+  updatedAt         DateTime                     @updatedAt
+
+  @@index([customerId, classTypeId, active, expiryDate])
+  @@index([customerId, category, active, expiryDate])
+  @@index([customerId, remainingCredits])
+  @@index([sourceType, createdAt])
+}
+
+model CustomerTrialPackage {
+  id                     String                     @id @default(cuid())
+  customerId             String
+  trialPackageTemplateId String
+  purchaseDate           DateTime
+  amountPaid             Decimal                    @db.Decimal(12, 2)
+  paymentMethod          PaymentMethod
+  notes                  String?
+  active                 Boolean                    @default(true)
+  customer               Customer                   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  trialPackageTemplate   TrialPackageTemplate       @relation(fields: [trialPackageTemplateId], references: [id], onDelete: Restrict)
+  items                  CustomerTrialPackageItem[]
+  bookings               Booking[]
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
+
+  @@index([customerId, active, purchaseDate])
+}
+
+model CustomerTrialPackageItem {
+  id                     String                                @id @default(cuid())
+  customerTrialPackageId String
+  classTypeId            String
+  originalQuantity       Int
+  remainingQuantity      Int
+  customerTrialPackage   CustomerTrialPackage                  @relation(fields: [customerTrialPackageId], references: [id], onDelete: Cascade)
+  classType              ClassType                             @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
+  bookings               Booking[]
+  transactions           CustomerTrialPackageItemTransaction[]
+  createdAt              DateTime                              @default(now())
+  updatedAt              DateTime                              @updatedAt
+
+  @@unique([customerTrialPackageId, classTypeId])
+  @@index([classTypeId, remainingQuantity])
+}
+
+model PackageAdjustment {
+  id                String                      @id @default(cuid())
+  customerPackageId String
+  deltaCredits      Int
+  reason            String
+  notes             String?
+  adjustedByUserId  String
+  createdAt         DateTime                    @default(now())
+  customerPackage   CustomerPackage             @relation(fields: [customerPackageId], references: [id], onDelete: Cascade)
+  adjustedByUser    User                        @relation("AdjustmentByUser", fields: [adjustedByUserId], references: [id], onDelete: Restrict)
+  transaction       CustomerPackageTransaction?
+
+  @@index([customerPackageId, createdAt])
+}
+
+model SingleClassPurchase {
+  id            String                    @id @default(cuid())
+  customerId    String
+  category      ClassCategory
+  classTypeId   String?
+  purchaseDate  DateTime
+  amountPaid    Decimal                   @db.Decimal(12, 2)
+  paymentMethod PaymentMethod
+  status        SingleClassPurchaseStatus @default(UNUSED)
+  expiryDate    DateTime?
+  notes         String?
+  customer      Customer                  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  classType     ClassType?                @relation(fields: [classTypeId], references: [id], onDelete: SetNull)
+  bookings      Booking[]
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+
+  @@index([customerId, category, status, expiryDate])
+}
+
+model Session {
+  id                     String                                @id @default(cuid())
+  classTypeId            String
+  instructorId           String
+  title                  String
+  date                   DateTime                              @db.Date
+  startTime              String
+  endTime                String
+  startsAt               DateTime
+  endsAt                 DateTime
+  capacity               Int
+  status                 SessionStatus                         @default(SCHEDULED)
+  notes                  String?
+  googleCalendarEventId  String?                               @unique
+  recurringBookingRuleId String?
+  classType              ClassType                             @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
+  instructor             Instructor                            @relation(fields: [instructorId], references: [id], onDelete: Restrict)
+  bookings               Booking[]
+  packageTransactions    CustomerPackageTransaction[]
+  trialItemTransactions  CustomerTrialPackageItemTransaction[]
+  recurringBookingRule   RecurringBookingRule?                 @relation(fields: [recurringBookingRuleId], references: [id], onDelete: SetNull)
+  createdAt              DateTime                              @default(now())
+  updatedAt              DateTime                              @updatedAt
+
+  @@index([date, startsAt, endsAt])
+  @@index([status, startsAt])
+}
+
+model Booking {
+  id                         String                                @id @default(cuid())
+  sessionId                  String
+  customerId                 String
+  status                     BookingStatus                         @default(BOOKED)
+  paymentSourceType          PaymentSourceType
+  customerPackageId          String?
+  singleClassPurchaseId      String?
+  customerTrialPackageId     String?
+  customerTrialPackageItemId String?
+  creditDeducted             Boolean                               @default(false)
+  singleUseConsumed          Boolean                               @default(false)
+  trialUseConsumed           Boolean                               @default(false)
+  restoredAt                 DateTime?
+  reversedByUserId           String?
+  notes                      String?
+  recurringBookingRuleId     String?
+  session                    Session                               @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  customer                   Customer                              @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerPackage            CustomerPackage?                      @relation(fields: [customerPackageId], references: [id], onDelete: SetNull)
+  singleClassPurchase        SingleClassPurchase?                  @relation(fields: [singleClassPurchaseId], references: [id], onDelete: SetNull)
+  customerTrialPackage       CustomerTrialPackage?                 @relation(fields: [customerTrialPackageId], references: [id], onDelete: SetNull)
+  customerTrialPackageItem   CustomerTrialPackageItem?             @relation(fields: [customerTrialPackageItemId], references: [id], onDelete: SetNull)
+  recurringBookingRule       RecurringBookingRule?                 @relation(fields: [recurringBookingRuleId], references: [id], onDelete: SetNull)
+  reversedByUser             User?                                 @relation("BookingReversedByUser", fields: [reversedByUserId], references: [id], onDelete: SetNull)
+  packageTransactions        CustomerPackageTransaction[]
+  trialItemTransactions      CustomerTrialPackageItemTransaction[]
+  createdAt                  DateTime                              @default(now())
+  updatedAt                  DateTime                              @updatedAt
+
+  @@unique([sessionId, customerId])
+  @@index([sessionId, status])
+  @@index([customerId, status])
+  @@index([customerTrialPackageItemId, status])
+  @@index([reversedByUserId, restoredAt])
+}
+
+model CustomerPackageTransaction {
+  id                  String                         @id @default(cuid())
+  customerPackageId   String
+  bookingId           String?
+  sessionId           String?
+  packageAdjustmentId String?                        @unique
+  createdByUserId     String?
+  eventType           CustomerPackageTransactionType
+  deltaCredits        Int
+  resultingCredits    Int
+  reason              String
+  notes               String?
+  details             Json?
+  customerPackage     CustomerPackage                @relation(fields: [customerPackageId], references: [id], onDelete: Cascade)
+  booking             Booking?                       @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  session             Session?                       @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  packageAdjustment   PackageAdjustment?             @relation(fields: [packageAdjustmentId], references: [id], onDelete: SetNull)
+  createdByUser       User?                          @relation("CustomerPackageTransactionByUser", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt           DateTime                       @default(now())
+
+  @@index([customerPackageId, createdAt])
+  @@index([bookingId])
+  @@index([sessionId])
+  @@index([createdByUserId, createdAt])
+}
+
+model CustomerTrialPackageItemTransaction {
+  id                         String                                  @id @default(cuid())
+  customerTrialPackageItemId String
+  bookingId                  String?
+  sessionId                  String?
+  createdByUserId            String?
+  eventType                  CustomerTrialPackageItemTransactionType
+  deltaQuantity              Int
+  resultingQuantity          Int
+  reason                     String
+  notes                      String?
+  details                    Json?
+  customerTrialPackageItem   CustomerTrialPackageItem                @relation(fields: [customerTrialPackageItemId], references: [id], onDelete: Cascade)
+  booking                    Booking?                                @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  session                    Session?                                @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  createdByUser              User?                                   @relation("CustomerTrialItemTransactionByUser", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt                  DateTime                                @default(now())
+
+  @@index([customerTrialPackageItemId, createdAt])
+  @@index([bookingId])
+  @@index([sessionId])
+  @@index([createdByUserId, createdAt])
+}
+
+model RecurringBookingRule {
+  id                String            @id @default(cuid())
+  customerId        String
+  classTypeId       String
+  instructorId      String?
+  dayOfWeek         Weekday
+  startTime         String
+  startDate         DateTime          @db.Date
+  endDate           DateTime?         @db.Date
+  active            Boolean           @default(true)
+  notes             String?
+  paymentSourceType PaymentSourceType @default(PACKAGE)
+  customer          Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  classType         ClassType         @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
+  instructor        Instructor?       @relation(fields: [instructorId], references: [id], onDelete: SetNull)
+  generatedSessions Session[]
+  generatedBookings Booking[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([active, dayOfWeek, startDate])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  entityType String
+  entityId   String
+  action     String
+  details    Json
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt])
+}

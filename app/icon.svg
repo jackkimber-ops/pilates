@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Re:Form">
+  <defs>
+    <linearGradient id="bg" x1="8" y1="6" x2="54" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8b6a80" />
+      <stop offset="1" stop-color="#5d4255" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="#f6efeb" />
+  <rect x="8" y="8" width="48" height="48" rx="16" fill="url(#bg)" />
+  <path
+    d="M23 20h10.2c8.2 0 12.8 4.3 12.8 10.8 0 6.6-4.7 10.9-12.8 10.9H29v10.3h-6V20zm6 16.7h4.1c4.7 0 7.2-2 7.2-5.8 0-3.6-2.5-5.8-7.2-5.8H29v11.6z"
+    fill="#fff8f4"
+  />
+</svg>

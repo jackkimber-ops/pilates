@@ -1,0 +1,184 @@
+import Link from "next/link";
+import { addDays } from "date-fns";
+import { CalendarPlus2, Clock3 } from "lucide-react";
+import { CalendarBoard } from "@/components/calendar/calendar-board";
+import { PageHeader } from "@/components/layout/page-header";
+import { Badge } from "@/components/ui/badge";
+import { buttonStyles } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { getToday, toDateTimeLabel } from "@/lib/date";
+import { prisma } from "@/lib/prisma";
+import { compactList } from "@/lib/utils";
+
+export default async function CalendarPage() {
+  const today = getToday();
+  const tomorrow = addDays(today, 1);
+
+  const [todaySessions, upcomingSessions] = await Promise.all([
+    prisma.session.findMany({
+      where: {
+        status: "SCHEDULED",
+        startsAt: {
+          gte: today,
+          lt: tomorrow,
+        },
+      },
+      include: {
+        instructor: true,
+        classType: true,
+        bookings: true,
+      },
+      orderBy: {
+        startsAt: "asc",
+      },
+    }),
+    prisma.session.findMany({
+      where: {
+        status: "SCHEDULED",
+      },
+      include: {
+        instructor: true,
+        classType: true,
+        bookings: true,
+      },
+      orderBy: {
+        startsAt: "asc",
+      },
+      take: 6,
+    }),
+  ]);
+
+  const todayBookingCount = todaySessions.reduce(
+    (sum, session) => sum + session.bookings.filter((booking) => booking.status !== "CANCELLED").length,
+    0,
+  );
+  const todayInstructorCount = new Set(todaySessions.map((session) => session.instructor.fullName)).size;
+  const nextSession = upcomingSessions[0] ?? null;
+
+  return (
+    <div className="page-stack">
+      <PageHeader
+        eyebrow="Calendar"
+        title="Calendar"
+        actions={
+          <Link href="/sessions/new" className={buttonStyles({ size: "lg" })}>
+            <CalendarPlus2 className="size-4" />
+            New session
+          </Link>
+        }
+      />
+
+      <section className="mock-stage">
+        <div className="relative z-10 grid gap-6 xl:grid-cols-[minmax(0,1.08fr)_360px]">
+          <CalendarBoard />
+
+          <div className="space-y-5 self-start xl:sticky xl:top-28">
+            <Card variant="tint" className="space-y-5">
+              <div className="section-header">
+                <div className="space-y-2">
+                  <p className="section-kicker">Today</p>
+                  <h2 className="section-title">Today</h2>
+                </div>
+                <Badge tone="plum">Live</Badge>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                <div className="stat-shell">
+                  <p className="stat-label">Sessions today</p>
+                  <p className="metric-number mt-3">{todaySessions.length}</p>
+                </div>
+                <div className="stat-shell">
+                  <p className="stat-label">Bookings today</p>
+                  <p className="metric-number mt-3">{todayBookingCount}</p>
+                </div>
+                <div className="stat-shell">
+                  <p className="stat-label">Instructors in room</p>
+                  <p className="metric-number mt-3">{todayInstructorCount}</p>
+                </div>
+              </div>
+
+              <div className="surface-inset rounded-[24px] p-4">
+                <p className="section-kicker">Rules</p>
+                <p className="mt-3 text-sm leading-7 text-muted">No overlaps. 60 minutes.</p>
+              </div>
+            </Card>
+
+            <Card variant="soft" className="space-y-4">
+              <div className="section-header">
+                <div className="space-y-2">
+                  <p className="section-kicker">Next</p>
+                  <h2 className="section-title">Upcoming</h2>
+                </div>
+                <Badge tone="outline">Session list</Badge>
+              </div>
+
+              {nextSession ? (
+                <Link href={`/sessions/${nextSession.id}`} className="list-row block">
+                  <div className="space-y-3">
+                    <div className="chip-row">
+                      <Badge tone={nextSession.classType.category === "GROUP" ? "plum" : "warm"}>
+                        {nextSession.classType.category}
+                      </Badge>
+                      <Badge tone="outline">{nextSession.status}</Badge>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-display text-[1.55rem] leading-none tracking-[-0.04em] text-ink">
+                        {nextSession.title}
+                      </p>
+                      <p className="text-sm leading-6 text-muted">
+                        {compactList([
+                          toDateTimeLabel(nextSession.startsAt),
+                          nextSession.instructor.fullName,
+                        ])}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-ink">
+                        {nextSession.bookings.filter((booking) => booking.status !== "CANCELLED").length}/
+                        {nextSession.capacity} booked
+                      </p>
+                      <p className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.16em] text-muted">
+                        <Clock3 className="size-3.5" />
+                        60 min
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              ) : (
+                <EmptyState title="No upcoming sessions" />
+              )}
+
+              <div className="space-y-3">
+                {upcomingSessions.slice(1).map((session) => (
+                  <Link key={session.id} href={`/sessions/${session.id}`} className="list-row-quiet block">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="chip-row">
+                          <Badge tone={session.classType.category === "GROUP" ? "plum" : "warm"}>
+                            {session.classType.category}
+                          </Badge>
+                        </div>
+                        <p className="mt-3 font-semibold text-ink">{session.title}</p>
+                        <p className="mt-1 text-sm leading-6 text-muted">
+                          {compactList([
+                          toDateTimeLabel(session.startsAt),
+                          session.instructor.fullName,
+                        ])}
+                      </p>
+                    </div>
+                    <p className="text-sm font-semibold text-ink">
+                        {session.bookings.filter((booking) => booking.status !== "CANCELLED").length}/
+                        {session.capacity}
+                    </p>
+                  </div>
+                </Link>
+                ))}
+              </div>
+            </Card>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
