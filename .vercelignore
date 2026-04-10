@@ -1,0 +1,16 @@
+.env
+.env.*
+.next
+node_modules
+coverage
+playwright-report
+test-results
+output
+.postgresql
+.tmp-pg
+server.log
+prod-server.log
+.codex-dev.log
+.playwright-cli
+*.tsbuildinfo
+.DS_Store
