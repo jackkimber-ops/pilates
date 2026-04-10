@@ -65,6 +65,19 @@ async function lockResource(tx: TransactionClient, namespace: number, value: str
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(CAST(${namespace} AS int4), CAST(${advisoryLockKey(value)} AS int4))`;
 }
 
+function isTransactionNotFoundError(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const message =
+    "message" in error && typeof (error as { message?: unknown }).message === "string"
+      ? (error as { message: string }).message
+      : "";
+
+  return message.toLowerCase().includes("transaction not found");
+}
+
 function shouldPenalize(status: BookingStatus, source: PaymentSourceType) {
   if (source === "OVERRIDE") {
     return false;
@@ -762,114 +775,126 @@ export async function createBooking(input: {
   deductPackageOnCreate?: boolean;
   userId?: string;
 }) {
-  const booking = await prisma.$transaction(async (tx) => {
-    await lockResource(tx, BOOKING_CREATION_LOCK_NAMESPACE, input.sessionId);
+  const createBookingTransaction = () =>
+    prisma.$transaction(async (tx) => {
+      await lockResource(tx, BOOKING_CREATION_LOCK_NAMESPACE, input.sessionId);
 
-    const session = await getSessionForBooking(tx, input.sessionId);
+      const session = await getSessionForBooking(tx, input.sessionId);
 
-    if (session.status === "CANCELLED") {
-      throw new Error("Session is cancelled.");
-    }
+      if (session.status === "CANCELLED") {
+        throw new Error("Session is cancelled.");
+      }
 
-    const existingBooking = await tx.booking.findUnique({
-      where: {
-        sessionId_customerId: {
+      const existingBooking = await tx.booking.findUnique({
+        where: {
+          sessionId_customerId: {
+            sessionId: input.sessionId,
+            customerId: input.customerId,
+          },
+        },
+      });
+
+      if (existingBooking) {
+        throw new Error("Customer already booked.");
+      }
+
+      await ensureCapacityAvailable(session);
+
+      if (!input.skipEntitlementValidation) {
+        if (input.paymentSourceType === "PACKAGE") {
+          await ensurePackageAvailability(
+            tx,
+            input.customerId,
+            session.classTypeId,
+            session.startsAt,
+          );
+        }
+
+        if (input.paymentSourceType === "SINGLE") {
+          await lockResource(
+            tx,
+            SINGLE_SELECTION_LOCK_NAMESPACE,
+            `${input.customerId}:${session.classType.category}:${session.classTypeId}`,
+          );
+
+          const eligibleSingle = await ensureSingleAvailability(tx, {
+            customerId: input.customerId,
+            category: session.classType.category,
+            classTypeId: session.classTypeId,
+            sessionDate: session.startsAt,
+            singleClassPurchaseId: input.singleClassPurchaseId,
+          });
+
+          return tx.booking.create({
+            data: {
+              sessionId: input.sessionId,
+              customerId: input.customerId,
+              paymentSourceType: input.paymentSourceType,
+              singleClassPurchaseId: eligibleSingle.id,
+              notes: input.notes,
+              recurringBookingRuleId: input.recurringBookingRuleId,
+            },
+          });
+        }
+
+        if (input.paymentSourceType === "TRIAL") {
+          await lockResource(
+            tx,
+            TRIAL_SELECTION_LOCK_NAMESPACE,
+            `${input.customerId}:${session.classTypeId}`,
+          );
+
+          const eligibleTrialItem = await ensureTrialAvailability(tx, {
+            customerId: input.customerId,
+            classTypeId: session.classTypeId,
+            customerTrialPackageItemId: input.customerTrialPackageItemId,
+          });
+
+          return tx.booking.create({
+            data: {
+              sessionId: input.sessionId,
+              customerId: input.customerId,
+              paymentSourceType: input.paymentSourceType,
+              customerTrialPackageId: eligibleTrialItem.customerTrialPackageId,
+              customerTrialPackageItemId: eligibleTrialItem.id,
+              notes: input.notes,
+              recurringBookingRuleId: input.recurringBookingRuleId,
+            },
+          });
+        }
+      }
+
+      const createdBooking = await tx.booking.create({
+        data: {
           sessionId: input.sessionId,
           customerId: input.customerId,
+          paymentSourceType: input.paymentSourceType,
+          singleClassPurchaseId:
+            input.paymentSourceType === "SINGLE" ? input.singleClassPurchaseId : undefined,
+          customerTrialPackageItemId:
+            input.paymentSourceType === "TRIAL" ? input.customerTrialPackageItemId : undefined,
+          notes: input.notes,
+          recurringBookingRuleId: input.recurringBookingRuleId,
         },
-      },
+      });
+
+      if (input.paymentSourceType === "PACKAGE" && input.deductPackageOnCreate) {
+        return deductPackageCredit(tx, createdBooking.id, input.userId);
+      }
+
+      return createdBooking;
     });
 
-    if (existingBooking) {
-      throw new Error("Customer already booked.");
+  let booking;
+  try {
+    booking = await createBookingTransaction();
+  } catch (error) {
+    if (!isTransactionNotFoundError(error)) {
+      throw error;
     }
 
-    await ensureCapacityAvailable(session);
-
-    if (!input.skipEntitlementValidation) {
-      if (input.paymentSourceType === "PACKAGE") {
-        await ensurePackageAvailability(
-          tx,
-          input.customerId,
-          session.classTypeId,
-          session.startsAt,
-        );
-      }
-
-      if (input.paymentSourceType === "SINGLE") {
-        await lockResource(
-          tx,
-          SINGLE_SELECTION_LOCK_NAMESPACE,
-          `${input.customerId}:${session.classType.category}:${session.classTypeId}`,
-        );
-
-        const eligibleSingle = await ensureSingleAvailability(tx, {
-          customerId: input.customerId,
-          category: session.classType.category,
-          classTypeId: session.classTypeId,
-          sessionDate: session.startsAt,
-          singleClassPurchaseId: input.singleClassPurchaseId,
-        });
-
-        return tx.booking.create({
-          data: {
-            sessionId: input.sessionId,
-            customerId: input.customerId,
-            paymentSourceType: input.paymentSourceType,
-            singleClassPurchaseId: eligibleSingle.id,
-            notes: input.notes,
-            recurringBookingRuleId: input.recurringBookingRuleId,
-          },
-        });
-      }
-
-      if (input.paymentSourceType === "TRIAL") {
-        await lockResource(
-          tx,
-          TRIAL_SELECTION_LOCK_NAMESPACE,
-          `${input.customerId}:${session.classTypeId}`,
-        );
-
-        const eligibleTrialItem = await ensureTrialAvailability(tx, {
-          customerId: input.customerId,
-          classTypeId: session.classTypeId,
-          customerTrialPackageItemId: input.customerTrialPackageItemId,
-        });
-
-        return tx.booking.create({
-          data: {
-            sessionId: input.sessionId,
-            customerId: input.customerId,
-            paymentSourceType: input.paymentSourceType,
-            customerTrialPackageId: eligibleTrialItem.customerTrialPackageId,
-            customerTrialPackageItemId: eligibleTrialItem.id,
-            notes: input.notes,
-            recurringBookingRuleId: input.recurringBookingRuleId,
-          },
-        });
-      }
-    }
-
-    const createdBooking = await tx.booking.create({
-      data: {
-        sessionId: input.sessionId,
-        customerId: input.customerId,
-        paymentSourceType: input.paymentSourceType,
-        singleClassPurchaseId:
-          input.paymentSourceType === "SINGLE" ? input.singleClassPurchaseId : undefined,
-        customerTrialPackageItemId:
-          input.paymentSourceType === "TRIAL" ? input.customerTrialPackageItemId : undefined,
-        notes: input.notes,
-        recurringBookingRuleId: input.recurringBookingRuleId,
-      },
-    });
-
-    if (input.paymentSourceType === "PACKAGE" && input.deductPackageOnCreate) {
-      return deductPackageCredit(tx, createdBooking.id, input.userId);
-    }
-
-    return createdBooking;
-  });
+    booking = await createBookingTransaction();
+  }
 
   await logAudit({
     userId: input.userId,
