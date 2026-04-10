@@ -50,6 +50,8 @@ const BOOKING_CREATION_LOCK_NAMESPACE = 51_002;
 const PACKAGE_DEDUCTION_LOCK_NAMESPACE = 51_003;
 const SINGLE_SELECTION_LOCK_NAMESPACE = 51_004;
 const TRIAL_SELECTION_LOCK_NAMESPACE = 51_005;
+const BOOKING_TX_MAX_WAIT_MS = 10_000;
+const BOOKING_TX_TIMEOUT_MS = 20_000;
 
 function advisoryLockKey(value: string) {
   let hash = 0;
@@ -883,6 +885,10 @@ export async function createBooking(input: {
       }
 
       return createdBooking;
+    },
+    {
+      maxWait: BOOKING_TX_MAX_WAIT_MS,
+      timeout: BOOKING_TX_TIMEOUT_MS,
     });
 
   let booking;
@@ -970,6 +976,10 @@ export async function reverseBookingUsage(input: {
       booking: updatedBooking,
       restoredSources,
     };
+  },
+  {
+    maxWait: BOOKING_TX_MAX_WAIT_MS,
+    timeout: BOOKING_TX_TIMEOUT_MS,
   });
 
   await logAudit({
@@ -1075,6 +1085,10 @@ export async function updateBookingStatus(input: {
       booking: workingBooking,
       restoredSources,
     };
+  },
+  {
+    maxWait: BOOKING_TX_MAX_WAIT_MS,
+    timeout: BOOKING_TX_TIMEOUT_MS,
   });
 
   await logAudit({
@@ -1154,6 +1168,10 @@ export async function adjustPackageCredits(input: {
     });
 
     return updated;
+  },
+  {
+    maxWait: BOOKING_TX_MAX_WAIT_MS,
+    timeout: BOOKING_TX_TIMEOUT_MS,
   });
 
   await logAudit({
