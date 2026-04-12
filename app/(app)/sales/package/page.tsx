@@ -16,32 +16,40 @@ export default async function SellPackagePage({
   searchParams: Promise<{ customerId?: string }>;
 }) {
   const params = await searchParams;
-  const customers = await prisma.customer.findMany({
-    where: {
-      status: "ACTIVE",
-    },
-    orderBy: {
-      fullName: "asc",
-    },
-    select: {
-      id: true,
-      fullName: true,
-    },
-  });
-
-  const templates = await prisma.packageTemplate.findMany({
-    where: {
-      active: true,
-    },
-    include: {
-      classType: {
-        select: {
-          name: true,
+  const [customers, templates] = await Promise.all([
+    prisma.customer.findMany({
+      where: {
+        status: "ACTIVE",
+      },
+      orderBy: {
+        fullName: "asc",
+      },
+      select: {
+        id: true,
+        fullName: true,
+      },
+    }),
+    prisma.packageTemplate.findMany({
+      where: {
+        active: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        sessionCount: true,
+        validityMonths: true,
+        regularPrice: true,
+        packagePrice: true,
+        classType: {
+          select: {
+            name: true,
+          },
         },
       },
-    },
-    orderBy: [{ classType: { name: "asc" } }, { sessionCount: "asc" }],
-  });
+      orderBy: [{ classType: { name: "asc" } }, { sessionCount: "asc" }],
+    }),
+  ]);
 
   return (
     <div className="page-stack">

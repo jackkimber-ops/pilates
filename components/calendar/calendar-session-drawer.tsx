@@ -6,6 +6,7 @@ import {
   CalendarDays,
   Clock3,
   ExternalLink,
+  Trash2,
   UserRound,
   WalletCards,
   X,
@@ -85,13 +86,16 @@ function getPaymentSourceTone(type: DrawerSessionDetail["bookings"][number]["pay
 export function CalendarSessionDrawer({
   sessionId,
   onClose,
+  onDeleted,
 }: {
   sessionId: string | null;
   onClose: () => void;
+  onDeleted: (sessionId: string) => void;
 }) {
   const cacheRef = useRef(new Map<string, DrawerSessionDetail>());
   const [detail, setDetail] = useState<DrawerSessionDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -184,6 +188,41 @@ export function CalendarSessionDrawer({
 
   if (!sessionId) {
     return null;
+  }
+
+  async function handleDelete() {
+    if (!detail || isDeleting) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Delete this session? It will be removed from the calendar. Any linked booking usage will be restored using the current session cancellation rules.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      setError(null);
+
+      const response = await fetch(`/api/sessions/${detail.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Unable to delete session.");
+      }
+
+      cacheRef.current.delete(detail.id);
+      onDeleted(detail.id);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete session.");
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   return (
@@ -392,19 +431,31 @@ export function CalendarSessionDrawer({
 
         <div className="sheet-footer">
           <div className="flex flex-col gap-3 sm:flex-row">
+            {detail ? (
+              <Link href={`/sessions/${detail.id}`} className={buttonStyles({ size: "sm" })}>
+                Edit
+                <ExternalLink className="size-4" />
+              </Link>
+            ) : null}
+            {detail ? (
+              <button
+                type="button"
+                className={buttonStyles({ variant: "danger", size: "sm" })}
+                onClick={handleDelete}
+                disabled={isDeleting}
+              >
+                <Trash2 className="size-4" />
+                {isDeleting ? "Deleting..." : "Delete"}
+              </button>
+            ) : null}
             <button
               type="button"
               className={buttonStyles({ variant: "secondary", size: "sm" })}
               onClick={onClose}
+              disabled={isDeleting}
             >
               Close
             </button>
-            {detail ? (
-              <Link href={`/sessions/${detail.id}`} className={buttonStyles({ size: "sm" })}>
-                Edit session
-                <ExternalLink className="size-4" />
-              </Link>
-            ) : null}
           </div>
         </div>
       </aside>

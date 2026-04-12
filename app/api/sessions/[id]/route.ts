@@ -1,7 +1,9 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getCustomerBalanceLabel } from "@/lib/balances";
 import { formatSessionWindow } from "@/lib/date";
+import { cancelSession } from "@/lib/domain/sessions";
 import { isGoogleCalendarConfigured } from "@/lib/google-calendar";
 import { prisma } from "@/lib/prisma";
 import { compactList } from "@/lib/utils";
@@ -328,4 +330,45 @@ export async function GET(
       ),
     })),
   });
+}
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await context.params;
+  const { searchParams } = new URL(request.url);
+  const restoreConsumedBookings = searchParams.get("restoreConsumedBookings") !== "false";
+
+  try {
+    await cancelSession({
+      sessionId: id,
+      restoreConsumedBookings,
+      userId: user.id,
+    });
+
+    revalidatePath("/");
+    revalidatePath("/calendar");
+    revalidatePath("/customers");
+    revalidatePath("/reports");
+    revalidatePath(`/sessions/${id}`);
+
+    return NextResponse.json({
+      ok: true,
+      id,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Unable to delete session.",
+      },
+      { status: 400 },
+    );
+  }
 }

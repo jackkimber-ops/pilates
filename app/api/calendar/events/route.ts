@@ -91,11 +91,14 @@ export async function GET(request: Request) {
 
   const sessions = await prisma.session.findMany({
     where: {
+      status: {
+        not: "CANCELLED",
+      },
       startsAt: {
-        gte: new Date(start),
+        lt: new Date(end),
       },
       endsAt: {
-        lte: new Date(end),
+        gt: new Date(start),
       },
     },
     select: {

@@ -24,6 +24,31 @@ function isSameDocumentNavigation(url: URL) {
   );
 }
 
+function getNavigableAnchorFromTarget(target: EventTarget | null) {
+  const element = target as Element | null;
+  const anchor = element?.closest("a[href]") as HTMLAnchorElement | null;
+
+  if (!anchor || anchor.target === "_blank" || anchor.hasAttribute("download")) {
+    return null;
+  }
+
+  const href = anchor.getAttribute("href");
+  if (!href || href.startsWith("#")) {
+    return null;
+  }
+
+  const url = new URL(anchor.href, window.location.href);
+  if (url.origin !== window.location.origin) {
+    return null;
+  }
+
+  if (isSameDocumentNavigation(url) || url.hash) {
+    return null;
+  }
+
+  return anchor;
+}
+
 export function NavigationFeedback() {
   const router = useRouter();
   const pathname = usePathname();
@@ -65,6 +90,24 @@ export function NavigationFeedback() {
       }, 12000);
     }
 
+    function handleDocumentPointerDown(event: PointerEvent) {
+      if (
+        event.defaultPrevented ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+
+      if (!getNavigableAnchorFromTarget(event.target)) {
+        return;
+      }
+
+      startNavigation();
+    }
+
     function handleDocumentClick(event: MouseEvent) {
       if (
         event.defaultPrevented ||
@@ -77,24 +120,7 @@ export function NavigationFeedback() {
         return;
       }
 
-      const target = event.target as Element | null;
-      const anchor = target?.closest("a[href]") as HTMLAnchorElement | null;
-
-      if (!anchor || anchor.target === "_blank" || anchor.hasAttribute("download")) {
-        return;
-      }
-
-      const href = anchor.getAttribute("href");
-      if (!href || href.startsWith("#")) {
-        return;
-      }
-
-      const url = new URL(anchor.href, window.location.href);
-      if (url.origin !== window.location.origin) {
-        return;
-      }
-
-      if (isSameDocumentNavigation(url) || url.hash) {
+      if (!getNavigableAnchorFromTarget(event.target)) {
         return;
       }
 
@@ -102,10 +128,12 @@ export function NavigationFeedback() {
     }
 
     window.addEventListener(NAVIGATION_START_EVENT, startNavigation as EventListener);
+    document.addEventListener("pointerdown", handleDocumentPointerDown, true);
     document.addEventListener("click", handleDocumentClick, true);
 
     return () => {
       window.removeEventListener(NAVIGATION_START_EVENT, startNavigation as EventListener);
+      document.removeEventListener("pointerdown", handleDocumentPointerDown, true);
       document.removeEventListener("click", handleDocumentClick, true);
 
       if (timeoutRef.current !== null) {

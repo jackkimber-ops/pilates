@@ -144,6 +144,18 @@ export function CalendarBoard() {
     });
   };
 
+  const refreshCalendarEvents = () => {
+    calendarRef.current?.getApi().refetchEvents();
+    router.refresh();
+  };
+
+  const handleSessionDeleted = (sessionId: string) => {
+    setSelectedSessionId(null);
+    const calendarApi = calendarRef.current?.getApi();
+    calendarApi?.getEventById(sessionId)?.remove();
+    refreshCalendarEvents();
+  };
+
   useEffect(() => {
     const mediaQuery = window.matchMedia("(min-width: 768px)");
 
@@ -314,7 +326,7 @@ export function CalendarBoard() {
                 throw new Error(payload?.error ?? "Unable to move the session.");
               }
 
-              router.refresh();
+              refreshCalendarEvents();
             } catch (eventError) {
               info.revert();
               setError(eventError instanceof Error ? eventError.message : "Unable to move the session.");
@@ -346,13 +358,17 @@ export function CalendarBoard() {
         </button>
       </div>
 
-      <CalendarSessionDrawer sessionId={selectedSessionId} onClose={() => setSelectedSessionId(null)} />
+      <CalendarSessionDrawer
+        sessionId={selectedSessionId}
+        onClose={() => setSelectedSessionId(null)}
+        onDeleted={handleSessionDeleted}
+      />
       <CalendarSessionCreateSheet
         slot={createSlot}
         onClose={() => setCreateSlot(null)}
         onCreated={() => {
           setCreateSlot(null);
-          calendarRef.current?.getApi().refetchEvents();
+          refreshCalendarEvents();
         }}
       />
     </div>
