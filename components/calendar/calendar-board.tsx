@@ -9,7 +9,10 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import { ArrowRight, CalendarDays } from "lucide-react";
+import { CalendarSessionCreateSheet } from "@/components/calendar/calendar-session-create-sheet";
+import { CalendarSessionDrawer } from "@/components/calendar/calendar-session-drawer";
 import { buttonStyles } from "@/components/ui/button";
+import { dispatchNavigationStart } from "@/lib/navigation-feedback";
 import { cn } from "@/lib/utils";
 
 type CalendarView = "dayGridMonth" | "timeGridWeek" | "timeGridDay";
@@ -25,6 +28,19 @@ const STATUS_LABELS: Record<string, string> = {
   CANCELLED: "Cancelled",
   COMPLETED: "Completed",
 };
+
+function toLocalDateInputValue(value: Date) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function toLocalTimeInputValue(value: Date) {
+  const hours = String(value.getHours()).padStart(2, "0");
+  const minutes = String(value.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
 
 function renderDayHeader(arg: DayHeaderContentArg) {
   const weekday = new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(arg.date);
@@ -118,6 +134,8 @@ export function CalendarBoard() {
   const [view, setView] = useState<CalendarView>("timeGridDay");
   const [isDesktop, setIsDesktop] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [createSlot, setCreateSlot] = useState<{ date: string; time: string } | null>(null);
 
   const applyView = (nextView: CalendarView) => {
     setView(nextView);
@@ -263,12 +281,19 @@ export function CalendarBoard() {
             }
           }}
           dateClick={(info) => {
+            setSelectedSessionId(null);
             const date = info.dateStr.slice(0, 10);
-            const time = info.allDay ? "08:00" : info.date.toISOString().slice(11, 16);
-            router.push(`/sessions/new?date=${date}&time=${time}`);
+            const time = info.allDay ? "08:00" : toLocalTimeInputValue(info.date);
+            setCreateSlot({ date, time });
           }}
           eventClick={(info) => {
-            router.push(`/sessions/${info.event.id}`);
+            if (info.jsEvent.metaKey || info.jsEvent.ctrlKey) {
+              dispatchNavigationStart();
+              router.push(`/sessions/${info.event.id}`);
+              return;
+            }
+
+            setSelectedSessionId(info.event.id);
           }}
           eventDrop={async (info) => {
             setError(null);
@@ -306,16 +331,30 @@ export function CalendarBoard() {
       </div>
 
       <div className="calendar-board-footer">
-        <p className="text-sm leading-6 text-muted">Open a session.</p>
+        <p className="text-sm leading-6 text-muted">Tap a session to preview.</p>
         <button
           type="button"
           className={buttonStyles({ variant: "ghost", size: "sm" })}
-          onClick={() => router.push("/sessions/new")}
+          onClick={() => {
+            const baseDate = calendarRef.current?.getApi().getDate() ?? new Date();
+            const date = toLocalDateInputValue(baseDate);
+            setCreateSlot({ date, time: "08:00" });
+          }}
         >
           Create session
           <ArrowRight className="size-4" />
         </button>
       </div>
+
+      <CalendarSessionDrawer sessionId={selectedSessionId} onClose={() => setSelectedSessionId(null)} />
+      <CalendarSessionCreateSheet
+        slot={createSlot}
+        onClose={() => setCreateSlot(null)}
+        onCreated={() => {
+          setCreateSlot(null);
+          calendarRef.current?.getApi().refetchEvents();
+        }}
+      />
     </div>
   );
 }

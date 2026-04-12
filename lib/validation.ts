@@ -322,6 +322,7 @@ export type FormState = {
   ok?: boolean;
   message?: string;
   fieldErrors?: Record<string, string[] | undefined>;
+  entityId?: string;
 };
 
 export const INITIAL_FORM_STATE: FormState = {};

@@ -46,7 +46,6 @@ export default async function SellSingleClassPage({
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="Sell one-off"
         title="Sell one-off"
         actions={
           <Link href="/customers" className={buttonStyles({ variant: "secondary" })}>
@@ -60,10 +59,7 @@ export default async function SellSingleClassPage({
           <div className="order-2 space-y-4 xl:order-1">
             <Card variant="soft" className="space-y-5">
               <div className="section-header">
-                <div className="space-y-2">
-                  <p className="section-kicker">Rules</p>
-                  <h2 className="section-title">One-off</h2>
-                </div>
+                <h2 className="section-title">One-off</h2>
                 <Badge tone="warm">Single use</Badge>
               </div>
               <div className="space-y-3">
@@ -98,7 +94,7 @@ export default async function SellSingleClassPage({
             </Card>
           </div>
 
-          <Sheet className="order-1 xl:order-2" eyebrow="One-off" title="One-off">
+          <Sheet className="order-1 xl:order-2" title="One-off">
             <SingleSaleForm
               redirectTo={params.customerId ? `/customers/${params.customerId}` : "/customers"}
               initialCustomerId={params.customerId}
@@ -112,10 +108,7 @@ export default async function SellSingleClassPage({
 
             <div className="surface-inset rounded-[24px] p-4">
               <div className="section-header">
-                <div className="space-y-2">
-                  <p className="section-kicker">Summary</p>
-                  <h3 className="font-display text-[1.45rem] leading-none tracking-[-0.04em] text-ink">After save</h3>
-                </div>
+                <h3 className="font-display text-[1.45rem] leading-none tracking-[-0.04em] text-ink">After save</h3>
                 <WalletCards className="size-5 text-accent-strong" />
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">

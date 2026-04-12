@@ -98,12 +98,36 @@ export async function GET(request: Request) {
         lte: new Date(end),
       },
     },
-    include: {
-      classType: true,
-      instructor: true,
+    select: {
+      id: true,
+      status: true,
+      startsAt: true,
+      endsAt: true,
+      capacity: true,
+      title: true,
+      classType: {
+        select: {
+          name: true,
+          category: true,
+        },
+      },
+      instructor: {
+        select: {
+          fullName: true,
+        },
+      },
       bookings: {
-        include: {
-          customer: true,
+        where: {
+          status: {
+            not: "CANCELLED",
+          },
+        },
+        select: {
+          customer: {
+            select: {
+              fullName: true,
+            },
+          },
         },
       },
     },
@@ -114,9 +138,8 @@ export async function GET(request: Request) {
 
   const events = sessions.map((session) => {
     const instructorTheme = getInstructorCalendarTheme(session.instructor.fullName);
-    const activeBookings = session.bookings.filter((booking) => booking.status !== "CANCELLED");
-    const activeBookingCount = activeBookings.length;
-    const attendeeNames = activeBookings.map((booking) => booking.customer.fullName);
+    const activeBookingCount = session.bookings.length;
+    const attendeeNames = session.bookings.map((booking) => booking.customer.fullName);
     const customerPreview = buildCustomerPreview(attendeeNames);
 
     return {

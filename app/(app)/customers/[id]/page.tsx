@@ -67,132 +67,357 @@ export default async function CustomerDetailPage({
 }) {
   const { id } = await params;
 
-  const customer = await prisma.customer.findUnique({
-    where: { id },
-    include: {
-      packages: {
-        include: {
-          classType: true,
-          packageTemplate: true,
-          transactions: {
-            include: {
-              createdByUser: true,
-            },
-            orderBy: {
-              createdAt: "desc",
-            },
+  const [
+    customerCore,
+    packages,
+    packageTransactions,
+    trialPackages,
+    trialItems,
+    trialTransactions,
+    singleClassPurchases,
+    bookings,
+    recurringRules,
+    classTypes,
+  ] = await Promise.all([
+    prisma.customer.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        fullName: true,
+        phone: true,
+        email: true,
+        notes: true,
+        tags: true,
+        status: true,
+      },
+    }),
+    prisma.customerPackage.findMany({
+      where: {
+        customerId: id,
+      },
+      select: {
+        id: true,
+        category: true,
+        sourceType: true,
+        originalCredits: true,
+        remainingCredits: true,
+        purchaseDate: true,
+        expiryDate: true,
+        amountPaid: true,
+        paymentMethod: true,
+        notes: true,
+        active: true,
+        classType: {
+          select: {
+            name: true,
+            category: true,
           },
         },
-        orderBy: {
-          purchaseDate: "desc",
+        packageTemplate: {
+          select: {
+            name: true,
+          },
         },
       },
-      trialPackages: {
-        include: {
-          trialPackageTemplate: true,
-          items: {
-            include: {
-              classType: true,
-              bookings: {
-                where: {
-                  trialUseConsumed: true,
-                },
-                include: {
-                  session: {
-                    include: {
-                      classType: true,
-                    },
-                  },
-                },
-                orderBy: {
-                  createdAt: "desc",
-                },
-              },
-              transactions: {
-                include: {
-                  createdByUser: true,
-                },
-                orderBy: {
-                  createdAt: "desc",
-                },
-              },
-            },
-            orderBy: {
-              createdAt: "asc",
-            },
-          },
-        },
-        orderBy: {
-          purchaseDate: "desc",
+      orderBy: {
+        purchaseDate: "desc",
+      },
+    }),
+    prisma.customerPackageTransaction.findMany({
+      where: {
+        customerPackage: {
+          customerId: id,
         },
       },
-      singleClassPurchases: {
-        include: {
-          classType: true,
-        },
-        orderBy: {
-          purchaseDate: "desc",
+      select: {
+        id: true,
+        customerPackageId: true,
+        eventType: true,
+        deltaCredits: true,
+        resultingCredits: true,
+        reason: true,
+        notes: true,
+        createdAt: true,
+        createdByUser: {
+          select: {
+            name: true,
+          },
         },
       },
-      bookings: {
-        include: {
-          session: {
-            include: {
-              instructor: true,
-              classType: true,
-            },
+      orderBy: {
+        createdAt: "desc",
+      },
+    }),
+    prisma.customerTrialPackage.findMany({
+      where: {
+        customerId: id,
+      },
+      select: {
+        id: true,
+        purchaseDate: true,
+        amountPaid: true,
+        paymentMethod: true,
+        notes: true,
+        active: true,
+        trialPackageTemplate: {
+          select: {
+            name: true,
           },
-          customerPackage: {
-            include: {
-              packageTemplate: true,
-            },
+        },
+      },
+      orderBy: {
+        purchaseDate: "desc",
+      },
+    }),
+    prisma.customerTrialPackageItem.findMany({
+      where: {
+        customerTrialPackage: {
+          customerId: id,
+        },
+      },
+      select: {
+        id: true,
+        customerTrialPackageId: true,
+        originalQuantity: true,
+        remainingQuantity: true,
+        classType: {
+          select: {
+            name: true,
           },
-          singleClassPurchase: {
-            include: {
-              classType: true,
-            },
-          },
+        },
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+    }),
+    prisma.customerTrialPackageItemTransaction.findMany({
+      where: {
+        customerTrialPackageItem: {
           customerTrialPackage: {
-            include: {
-              trialPackageTemplate: true,
-            },
-          },
-          customerTrialPackageItem: {
-            include: {
-              classType: true,
-            },
+            customerId: id,
           },
         },
-        orderBy: {
-          createdAt: "desc",
+      },
+      select: {
+        id: true,
+        customerTrialPackageItemId: true,
+        eventType: true,
+        deltaQuantity: true,
+        reason: true,
+        notes: true,
+        createdAt: true,
+        createdByUser: {
+          select: {
+            name: true,
+          },
         },
       },
-      recurringRules: {
-        include: {
-          classType: true,
-          instructor: true,
-        },
-        orderBy: {
-          createdAt: "desc",
+      orderBy: {
+        createdAt: "desc",
+      },
+    }),
+    prisma.singleClassPurchase.findMany({
+      where: {
+        customerId: id,
+      },
+      select: {
+        id: true,
+        category: true,
+        purchaseDate: true,
+        amountPaid: true,
+        paymentMethod: true,
+        status: true,
+        expiryDate: true,
+        classType: {
+          select: {
+            name: true,
+          },
         },
       },
-    },
-  });
+      orderBy: {
+        purchaseDate: "desc",
+      },
+    }),
+    prisma.booking.findMany({
+      where: {
+        customerId: id,
+      },
+      select: {
+        id: true,
+        sessionId: true,
+        status: true,
+        paymentSourceType: true,
+        creditDeducted: true,
+        singleUseConsumed: true,
+        trialUseConsumed: true,
+        restoredAt: true,
+        notes: true,
+        customerPackage: {
+          select: {
+            sourceType: true,
+            classType: {
+              select: {
+                name: true,
+                category: true,
+              },
+            },
+            packageTemplate: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        singleClassPurchase: {
+          select: {
+            classType: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        customerTrialPackage: {
+          select: {
+            trialPackageTemplate: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        customerTrialPackageItem: {
+          select: {
+            classType: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        session: {
+          select: {
+            title: true,
+            startsAt: true,
+            status: true,
+            instructor: {
+              select: {
+                fullName: true,
+              },
+            },
+            classType: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    }),
+    prisma.recurringBookingRule.findMany({
+      where: {
+        customerId: id,
+      },
+      select: {
+        id: true,
+        active: true,
+        paymentSourceType: true,
+        dayOfWeek: true,
+        startTime: true,
+        classType: {
+          select: {
+            name: true,
+            category: true,
+          },
+        },
+        instructor: {
+          select: {
+            fullName: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    }),
+    prisma.classType.findMany({
+      where: {
+        active: true,
+      },
+      orderBy: [{ category: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+      },
+    }),
+  ]);
 
-  if (!customer) {
+  if (!customerCore) {
     notFound();
   }
 
-  const classTypes = await prisma.classType.findMany({
-    where: {
-      active: true,
+  const transactionsByPackageId = packageTransactions.reduce(
+    (map, transaction) => {
+      const existing = map.get(transaction.customerPackageId);
+      if (existing) {
+        existing.push(transaction);
+      } else {
+        map.set(transaction.customerPackageId, [transaction]);
+      }
+
+      return map;
     },
-    orderBy: [{ category: "asc" }, { name: "asc" }],
-    select: {
-      id: true,
-      name: true,
+    new Map<string, typeof packageTransactions>(),
+  );
+
+  const itemsByTrialPackageId = trialItems.reduce(
+    (map, item) => {
+      const existing = map.get(item.customerTrialPackageId);
+      if (existing) {
+        existing.push(item);
+      } else {
+        map.set(item.customerTrialPackageId, [item]);
+      }
+
+      return map;
     },
-  });
+    new Map<string, typeof trialItems>(),
+  );
+
+  const transactionsByTrialItemId = trialTransactions.reduce(
+    (map, transaction) => {
+      const existing = map.get(transaction.customerTrialPackageItemId);
+      if (existing) {
+        existing.push(transaction);
+      } else {
+        map.set(transaction.customerTrialPackageItemId, [transaction]);
+      }
+
+      return map;
+    },
+    new Map<string, typeof trialTransactions>(),
+  );
+
+  const customer = {
+    ...customerCore,
+    packages: packages.map((customerPackage) => ({
+      ...customerPackage,
+      transactions: transactionsByPackageId.get(customerPackage.id) ?? [],
+    })),
+    trialPackages: trialPackages.map((trialPackage) => ({
+      ...trialPackage,
+      items: (itemsByTrialPackageId.get(trialPackage.id) ?? []).map((item) => ({
+        ...item,
+        transactions: transactionsByTrialItemId.get(item.id) ?? [],
+      })),
+    })),
+    singleClassPurchases,
+    bookings,
+    recurringRules,
+  };
 
   const paymentHistory = [
     ...customer.packages

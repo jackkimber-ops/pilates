@@ -46,7 +46,6 @@ export default async function SellPackagePage({
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="Sell package"
         title="Sell package"
         actions={
           <Link href="/customers" className={buttonStyles({ variant: "secondary" })}>
@@ -60,10 +59,7 @@ export default async function SellPackagePage({
           <div className="order-2 space-y-4 xl:order-1">
             <Card variant="soft" className="space-y-5">
               <div className="section-header">
-                <div className="space-y-2">
-                  <p className="section-kicker">Rules</p>
-                  <h2 className="section-title">Package</h2>
-                </div>
+                <h2 className="section-title">Package</h2>
                 <Badge tone="plum">Active</Badge>
               </div>
               <div className="space-y-3">
@@ -100,7 +96,7 @@ export default async function SellPackagePage({
             </Card>
           </div>
 
-          <Sheet className="order-1 xl:order-2" eyebrow="Package" title="Package">
+          <Sheet className="order-1 xl:order-2" title="Package">
             <PackageSaleForm
               redirectTo={params.customerId ? `/customers/${params.customerId}` : "/customers"}
               initialCustomerId={params.customerId}
@@ -119,10 +115,7 @@ export default async function SellPackagePage({
 
             <div className="surface-inset rounded-[24px] p-4">
               <div className="section-header">
-                <div className="space-y-2">
-                  <p className="section-kicker">Summary</p>
-                  <h3 className="font-display text-[1.45rem] leading-none tracking-[-0.04em] text-ink">After save</h3>
-                </div>
+                <h3 className="font-display text-[1.45rem] leading-none tracking-[-0.04em] text-ink">After save</h3>
                 <Wallet className="size-5 text-accent-strong" />
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">

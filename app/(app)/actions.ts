@@ -102,6 +102,94 @@ function revalidateCorePaths() {
   ].forEach((path) => revalidatePath(path));
 }
 
+async function createSessionWithInitialBooking(input: {
+  classTypeId: string;
+  instructorId: string;
+  customerId: string;
+  title: string;
+  date: string;
+  startTime: string;
+  capacity: number;
+  notes?: string;
+  syncToGoogle: boolean;
+  userId: string;
+}) {
+  const availableBalance = await prisma.customerPackage.findFirst({
+    where: {
+      customerId: input.customerId,
+      classTypeId: input.classTypeId,
+      active: true,
+      remainingCredits: {
+        gt: 0,
+      },
+      OR: [
+        {
+          expiryDate: null,
+        },
+        {
+          expiryDate: {
+            gte: combineDateAndTime(input.date, input.startTime),
+          },
+        },
+      ],
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!availableBalance) {
+    throw new Error("Matching balance required.");
+  }
+
+  const session = await createSession({
+    classTypeId: input.classTypeId,
+    instructorId: input.instructorId,
+    title: input.title,
+    date: input.date,
+    startTime: input.startTime,
+    capacity: input.capacity,
+    notes: input.notes,
+    syncToGoogle: false,
+    userId: input.userId,
+  });
+
+  try {
+    await createBooking({
+      sessionId: session.id,
+      customerId: input.customerId,
+      paymentSourceType: "PACKAGE",
+      deductPackageOnCreate: true,
+      userId: input.userId,
+    });
+
+    if (input.syncToGoogle) {
+      await updateSession({
+        sessionId: session.id,
+        classTypeId: input.classTypeId,
+        instructorId: input.instructorId,
+        title: input.title,
+        date: input.date,
+        startTime: input.startTime,
+        capacity: input.capacity,
+        notes: input.notes,
+        syncToGoogle: true,
+        userId: input.userId,
+      });
+    }
+
+    return session;
+  } catch (bookingError) {
+    await prisma.session.delete({
+      where: {
+        id: session.id,
+      },
+    });
+
+    throw bookingError;
+  }
+}
+
 export async function logoutAction() {
   await signOut();
   redirect("/login");
@@ -708,81 +796,29 @@ export async function saveSessionAction(
         };
       }
 
-      const availableBalance = await prisma.customerPackage.findFirst({
-        where: {
-          customerId: parsed.data.customerId,
-          classTypeId: parsed.data.classTypeId,
-          active: true,
-          remainingCredits: {
-            gt: 0,
-          },
-          OR: [
-            {
-              expiryDate: null,
-            },
-            {
-              expiryDate: {
-                gte: combineDateAndTime(parsed.data.date, parsed.data.startTime),
-              },
-            },
-          ],
-        },
-        select: {
-          id: true,
-        },
-      });
-
-      if (!availableBalance) {
-        return {
-          ok: false,
-          message: "No active balance for this class.",
-          fieldErrors: {
-            customerId: ["Matching balance required."],
-          },
-        };
-      }
-
-      session = await createSession({
-        classTypeId: parsed.data.classTypeId,
-        instructorId: parsed.data.instructorId,
-        title: parsed.data.title,
-        date: parsed.data.date,
-        startTime: parsed.data.startTime,
-        capacity: parsed.data.capacity,
-        notes: parsed.data.notes,
-        syncToGoogle: false,
-        userId: user.id,
-      });
-
       try {
-        await createBooking({
-          sessionId: session.id,
+        session = await createSessionWithInitialBooking({
+          classTypeId: parsed.data.classTypeId,
+          instructorId: parsed.data.instructorId,
           customerId: parsed.data.customerId,
-          paymentSourceType: "PACKAGE",
-          deductPackageOnCreate: true,
+          title: parsed.data.title,
+          date: parsed.data.date,
+          startTime: parsed.data.startTime,
+          capacity: parsed.data.capacity,
+          notes: parsed.data.notes,
+          syncToGoogle: parsed.data.syncToGoogle,
           userId: user.id,
         });
-
-        if (parsed.data.syncToGoogle) {
-          await updateSession({
-            sessionId: session.id,
-            classTypeId: parsed.data.classTypeId,
-            instructorId: parsed.data.instructorId,
-            title: parsed.data.title,
-            date: parsed.data.date,
-            startTime: parsed.data.startTime,
-            capacity: parsed.data.capacity,
-            notes: parsed.data.notes,
-            syncToGoogle: true,
-            userId: user.id,
-          });
-        }
       } catch (bookingError) {
-        await prisma.session.delete({
-          where: {
-            id: session.id,
-          },
-        });
+        if (bookingError instanceof Error && bookingError.message === "Matching balance required.") {
+          return {
+            ok: false,
+            message: "No active balance for this class.",
+            fieldErrors: {
+              customerId: ["Matching balance required."],
+            },
+          };
+        }
 
         throw bookingError;
       }
@@ -795,6 +831,77 @@ export async function saveSessionAction(
     }
     redirect(getRedirectTo(formData, `/sessions/${session.id}`));
   } catch (error) {
+    return actionError(error);
+  }
+}
+
+export async function createCalendarSessionAction(
+  _: FormState = INITIAL_FORM_STATE,
+  formData: FormData,
+): Promise<FormState> {
+  const user = await requireUser();
+  const parsed = sessionFormSchema.safeParse(formDataToObject(formData));
+
+  if (!parsed.success) {
+    return fromZodError(parsed.error);
+  }
+
+  if (!parsed.data.customerId) {
+    return {
+      ok: false,
+      message: "Select a customer.",
+      fieldErrors: {
+        customerId: ["Select a customer."],
+      },
+    };
+  }
+
+  try {
+    const classType = await prisma.classType.findUnique({
+      where: { id: parsed.data.classTypeId },
+    });
+
+    if (!classType) {
+      throw new Error("Class type not found.");
+    }
+
+    if (parsed.data.capacity > classType.maxCapacity) {
+      throw new Error(`Capacity cannot exceed ${classType.maxCapacity} for this class type.`);
+    }
+
+    const session = await createSessionWithInitialBooking({
+      classTypeId: parsed.data.classTypeId,
+      instructorId: parsed.data.instructorId,
+      customerId: parsed.data.customerId,
+      title: parsed.data.title,
+      date: parsed.data.date,
+      startTime: parsed.data.startTime,
+      capacity: parsed.data.capacity,
+      notes: parsed.data.notes,
+      syncToGoogle: parsed.data.syncToGoogle,
+      userId: user.id,
+    });
+
+    revalidateCorePaths();
+    revalidatePath(`/sessions/${session.id}`);
+    revalidatePath(`/customers/${parsed.data.customerId}`);
+
+    return {
+      ok: true,
+      message: "Session created.",
+      entityId: session.id,
+    };
+  } catch (error) {
+    if (error instanceof Error && error.message === "Matching balance required.") {
+      return {
+        ok: false,
+        message: "No active balance for this class.",
+        fieldErrors: {
+          customerId: ["Matching balance required."],
+        },
+      };
+    }
+
     return actionError(error);
   }
 }

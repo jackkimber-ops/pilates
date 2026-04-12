@@ -57,32 +57,89 @@ export default async function SessionDetailPage({
 
   const session = await prisma.session.findUnique({
     where: { id },
-    include: {
-      classType: true,
-      instructor: true,
-      recurringBookingRule: true,
+    select: {
+      id: true,
+      classTypeId: true,
+      instructorId: true,
+      title: true,
+      date: true,
+      startTime: true,
+      startsAt: true,
+      endsAt: true,
+      capacity: true,
+      status: true,
+      notes: true,
+      googleCalendarEventId: true,
+      recurringBookingRuleId: true,
+      classType: {
+        select: {
+          name: true,
+          category: true,
+        },
+      },
+      instructor: {
+        select: {
+          fullName: true,
+        },
+      },
       bookings: {
-        include: {
-          customer: true,
+        select: {
+          id: true,
+          sessionId: true,
+          customerId: true,
+          status: true,
+          paymentSourceType: true,
+          creditDeducted: true,
+          singleUseConsumed: true,
+          trialUseConsumed: true,
+          restoredAt: true,
+          notes: true,
+          customer: {
+            select: {
+              fullName: true,
+            },
+          },
           customerPackage: {
-            include: {
-              classType: true,
-              packageTemplate: true,
+            select: {
+              sourceType: true,
+              classType: {
+                select: {
+                  name: true,
+                  category: true,
+                },
+              },
+              packageTemplate: {
+                select: {
+                  name: true,
+                },
+              },
             },
           },
           singleClassPurchase: {
-            include: {
-              classType: true,
+            select: {
+              classType: {
+                select: {
+                  name: true,
+                },
+              },
             },
           },
           customerTrialPackage: {
-            include: {
-              trialPackageTemplate: true,
+            select: {
+              trialPackageTemplate: {
+                select: {
+                  name: true,
+                },
+              },
             },
           },
           customerTrialPackageItem: {
-            include: {
-              classType: true,
+            select: {
+              classType: {
+                select: {
+                  name: true,
+                },
+              },
             },
           },
           reversedByUser: {
@@ -112,6 +169,7 @@ export default async function SessionDetailPage({
         id: true,
         name: true,
         maxCapacity: true,
+        durationMinutes: true,
       },
     }),
     prisma.instructor.findMany({
@@ -147,10 +205,21 @@ export default async function SessionDetailPage({
         },
         OR: [{ expiryDate: null }, { expiryDate: { gte: session.startsAt } }],
       },
-      include: {
-        customer: true,
-        classType: true,
-        packageTemplate: true,
+      select: {
+        customerId: true,
+        remainingCredits: true,
+        sourceType: true,
+        classType: {
+          select: {
+            name: true,
+            category: true,
+          },
+        },
+        packageTemplate: {
+          select: {
+            name: true,
+          },
+        },
       },
       orderBy: [{ purchaseDate: "asc" }],
     }),
@@ -167,9 +236,17 @@ export default async function SessionDetailPage({
           },
         ],
       },
-      include: {
-        customer: true,
-        classType: true,
+      select: {
+        id: true,
+        customerId: true,
+        category: true,
+        amountPaid: true,
+        expiryDate: true,
+        classType: {
+          select: {
+            name: true,
+          },
+        },
         bookings: {
           where: {
             status: {
@@ -179,6 +256,7 @@ export default async function SessionDetailPage({
           select: {
             id: true,
           },
+          take: 1,
         },
       },
       orderBy: [{ purchaseDate: "asc" }, { createdAt: "asc" }],
@@ -193,12 +271,23 @@ export default async function SessionDetailPage({
           active: true,
         },
       },
-      include: {
-        classType: true,
+      select: {
+        id: true,
+        originalQuantity: true,
+        remainingQuantity: true,
+        classType: {
+          select: {
+            name: true,
+          },
+        },
         customerTrialPackage: {
-          include: {
-            customer: true,
-            trialPackageTemplate: true,
+          select: {
+            customerId: true,
+            trialPackageTemplate: {
+              select: {
+                name: true,
+              },
+            },
           },
         },
         bookings: {
@@ -230,25 +319,41 @@ export default async function SessionDetailPage({
     }));
 
   const packageBalanceOptions = Array.from(
-    new Map(
-      packageBalances.map((balance) => {
-        const matchingBalances = packageBalances.filter((entry) => entry.customerId === balance.customerId);
-        const totalRemaining = matchingBalances.reduce((sum, entry) => sum + entry.remainingCredits, 0);
+    packageBalances
+      .reduce((map, balance) => {
+        const existing = map.get(balance.customerId);
 
-        return [
-          balance.customerId,
-          {
-            customerId: balance.customerId,
-            label: compactList([
-              balance.sourceType === "IMPORTED" ? "Imported balance available" : "Package available",
-              `${totalRemaining} remaining`,
-              getCustomerBalanceLabel(balance),
-            ]),
-          },
-        ] as const;
-      }),
-    ).values(),
-  );
+        if (existing) {
+          existing.totalRemaining += balance.remainingCredits;
+          return map;
+        }
+
+        map.set(balance.customerId, {
+          customerId: balance.customerId,
+          totalRemaining: balance.remainingCredits,
+          availabilityLabel: balance.sourceType === "IMPORTED" ? "Imported balance available" : "Package available",
+          balanceLabel: getCustomerBalanceLabel(balance),
+        });
+
+        return map;
+      }, new Map<
+        string,
+        {
+          customerId: string;
+          totalRemaining: number;
+          availabilityLabel: string;
+          balanceLabel: string;
+        }
+      >())
+      .values(),
+  ).map((option) => ({
+    customerId: option.customerId,
+    label: compactList([
+      option.availabilityLabel,
+      `${option.totalRemaining} remaining`,
+      option.balanceLabel,
+    ]),
+  }));
 
   const trialPurchaseOptions = trialItems
     .map((item) => ({

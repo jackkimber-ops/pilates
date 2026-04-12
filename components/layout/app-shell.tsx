@@ -4,6 +4,7 @@ import { CalendarDays, LogOut, Plus, Sparkles } from "lucide-react";
 import { Button, buttonStyles } from "@/components/ui/button";
 import { AccountMenu } from "@/components/layout/account-menu";
 import { MobileNav } from "@/components/layout/mobile-nav";
+import { NavigationFeedback } from "@/components/layout/navigation-feedback";
 import { PrimaryNav } from "@/components/layout/primary-nav";
 import { ShellMenu } from "@/components/layout/shell-menu";
 import { getInitials } from "@/lib/utils";
@@ -15,7 +16,7 @@ const SHELL_MENU_ITEMS = [
   },
   {
     href: "/sales/single",
-    label: "Sell one-off",
+    label: "One-offs",
   },
   {
     href: "/recurring",
@@ -50,11 +51,13 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-transparent">
+      <NavigationFeedback />
+
       <div className="page-shell">
         <div className="app-shell-grid">
           <aside className="surface-panel hidden rounded-[38px] p-6 lg:sticky lg:top-6 lg:flex lg:h-[calc(100vh-3rem)] lg:flex-col">
-            <div className="space-y-8">
-              <div className="space-y-6">
+            <div className="space-y-6">
+              <div className="space-y-4">
                 <div className="flex items-center gap-4">
                   <div className="flex size-14 items-center justify-center rounded-[22px] bg-accent-soft font-display text-lg text-accent-strong shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
                     R:
@@ -75,7 +78,7 @@ export function AppShell({
                   className={buttonStyles({
                     variant: "primary",
                     size: "sm",
-                    className: "mt-4 h-11 w-full justify-center rounded-[22px] shadow-[0_24px_40px_-28px_rgba(99,69,76,0.62)]",
+                    className: "w-full justify-center rounded-[20px] shadow-[0_24px_40px_-28px_rgba(99,69,76,0.62)]",
                   })}
                 >
                   <Sparkles className="size-4" />
@@ -103,12 +106,12 @@ export function AppShell({
             </div>
           </aside>
 
-          <div className="min-w-0 space-y-6">
+          <div className="min-w-0 space-y-5">
             <header className="top-app-bar">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h1 className="font-display text-[1.95rem] leading-none tracking-[-0.055em] text-ink md:text-[2.15rem]">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <h1 className="font-display text-[1.8rem] leading-none tracking-[-0.055em] text-ink md:text-[2rem]">
                       Re:Form
                     </h1>
                     <span className="top-app-bar-chip">{todayLabel}</span>

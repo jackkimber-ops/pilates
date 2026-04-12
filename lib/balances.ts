@@ -8,7 +8,7 @@ import type {
   PackageTemplate,
 } from "@prisma/client";
 
-type CustomerBalanceLike = CustomerPackage & {
+type CustomerBalanceLike = Pick<CustomerPackage, "sourceType"> & {
   classType?: Pick<ClassType, "name" | "category"> | null;
   packageTemplate?: Pick<PackageTemplate, "name"> | null;
 };

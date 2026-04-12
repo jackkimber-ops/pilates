@@ -40,18 +40,48 @@ export function BookingForm({
   const [state, action] = useActionState(createBookingAction, INITIAL_FORM_STATE);
   const [paymentSourceType, setPaymentSourceType] = useState<"PACKAGE" | "SINGLE" | "TRIAL" | "OVERRIDE">("PACKAGE");
   const [customerId, setCustomerId] = useState("");
+  const singleOptionsByCustomer = useMemo(
+    () =>
+      singlePurchaseOptions.reduce((map, option) => {
+        const existing = map.get(option.customerId) ?? [];
+        existing.push(option);
+        map.set(option.customerId, existing);
+        return map;
+      }, new Map<string, typeof singlePurchaseOptions>()),
+    [singlePurchaseOptions],
+  );
+  const packageOptionsByCustomer = useMemo(
+    () =>
+      packageBalanceOptions.reduce((map, option) => {
+        const existing = map.get(option.customerId) ?? [];
+        existing.push(option);
+        map.set(option.customerId, existing);
+        return map;
+      }, new Map<string, typeof packageBalanceOptions>()),
+    [packageBalanceOptions],
+  );
+  const trialOptionsByCustomer = useMemo(
+    () =>
+      trialPurchaseOptions.reduce((map, option) => {
+        const existing = map.get(option.customerId) ?? [];
+        existing.push(option);
+        map.set(option.customerId, existing);
+        return map;
+      }, new Map<string, typeof trialPurchaseOptions>()),
+    [trialPurchaseOptions],
+  );
 
   const filteredSingleOptions = useMemo(
-    () => singlePurchaseOptions.filter((option) => option.customerId === customerId),
-    [customerId, singlePurchaseOptions],
+    () => singleOptionsByCustomer.get(customerId) ?? [],
+    [customerId, singleOptionsByCustomer],
   );
   const filteredPackageBalanceOptions = useMemo(
-    () => packageBalanceOptions.filter((option) => option.customerId === customerId),
-    [customerId, packageBalanceOptions],
+    () => packageOptionsByCustomer.get(customerId) ?? [],
+    [customerId, packageOptionsByCustomer],
   );
   const filteredTrialOptions = useMemo(
-    () => trialPurchaseOptions.filter((option) => option.customerId === customerId),
-    [customerId, trialPurchaseOptions],
+    () => trialOptionsByCustomer.get(customerId) ?? [],
+    [customerId, trialOptionsByCustomer],
   );
   const trialSelectionBlocked = paymentSourceType === "TRIAL" && customerId !== "" && filteredTrialOptions.length === 0;
   const packageSelectionBlocked =

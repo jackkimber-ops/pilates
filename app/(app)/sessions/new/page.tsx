@@ -2,8 +2,9 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Sheet } from "@/components/ui/sheet";
-import { getToday, toDateInputValue } from "@/lib/date";
-import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth/session";
+import { combineDateAndTime, getToday, toDateInputValue } from "@/lib/date";
+import { getSessionCreateOptions } from "@/lib/session-create-options";
 import { SessionForm } from "@/app/(app)/sessions/session-form";
 
 export default async function NewSessionPage({
@@ -12,71 +13,26 @@ export default async function NewSessionPage({
   searchParams: Promise<{ date?: string; time?: string }>;
 }) {
   const params = await searchParams;
-  const [classTypes, instructors, customers] = await Promise.all([
-    prisma.classType.findMany({
-      where: {
-        active: true,
-      },
-      orderBy: [{ category: "asc" }, { name: "asc" }],
-      select: {
-        id: true,
-        name: true,
-        maxCapacity: true,
-      },
-    }),
-    prisma.instructor.findMany({
-      where: {
-        active: true,
-      },
-      orderBy: {
-        fullName: "asc",
-      },
-      select: {
-        id: true,
-        fullName: true,
-      },
-    }),
-    prisma.customer.findMany({
-      where: {
-        status: "ACTIVE",
-      },
-      orderBy: {
-        fullName: "asc",
-      },
-      select: {
-        id: true,
-        fullName: true,
-        packages: {
-          where: {
-            active: true,
-            remainingCredits: {
-              gt: 0,
-            },
-            OR: [{ expiryDate: null }, { expiryDate: { gte: getToday() } }],
-          },
-          include: {
-            classType: true,
-            packageTemplate: true,
-          },
-          orderBy: [{ purchaseDate: "asc" }],
-        },
-      },
-    }),
-  ]);
+  const today = getToday();
+  const user = await getCurrentUser();
+  const initialDate = params.date ?? toDateInputValue(today);
+  const initialTime = params.time ?? "08:00";
+  const { classTypes, instructors, customers, packageAvailability, defaultInstructorId } =
+    await getSessionCreateOptions({
+      balanceValidFrom: combineDateAndTime(initialDate, initialTime),
+      user,
+    });
 
   return (
     <div className="page-stack">
-      <PageHeader eyebrow="Calendar" title="Create session" />
+      <PageHeader title="Create session" />
 
       <section className="mock-stage">
         <div className="relative z-10 grid gap-5 xl:grid-cols-[1fr_460px]">
           <div className="order-2 space-y-4 xl:order-1">
             <Card variant="soft" className="space-y-5">
               <div className="section-header">
-                <div className="space-y-2">
-                  <p className="section-kicker">Rules</p>
-                  <h2 className="section-title">Create and book</h2>
-                </div>
+                <h2 className="section-title">Create session</h2>
                 <Badge tone="warm">1 room</Badge>
               </div>
               <div className="space-y-3">
@@ -92,7 +48,6 @@ export default async function NewSessionPage({
 
           <Sheet
             className="order-1 xl:order-2"
-            eyebrow="Session"
             title="Create session"
           >
             <SessionForm
@@ -102,34 +57,12 @@ export default async function NewSessionPage({
                 id: customer.id,
                 fullName: customer.fullName,
               }))}
-              packageAvailability={customers.flatMap((customer) =>
-                Array.from(
-                  new Map(
-                    customer.packages.map((customerPackage) => [
-                      customerPackage.classTypeId,
-                      {
-                        customerId: customer.id,
-                        classTypeId: customerPackage.classTypeId,
-                        totalRemainingCredits: customer.packages
-                          .filter(
-                            (entry) => entry.classTypeId === customerPackage.classTypeId,
-                          )
-                          .reduce((sum, entry) => sum + entry.remainingCredits, 0),
-                        nextPackageName:
-                          customerPackage.packageTemplate?.name ??
-                          `${customerPackage.classType.name} imported balance`,
-                        nextPackageRemainingCredits: customerPackage.remainingCredits,
-                        sourceType: customerPackage.sourceType,
-                      },
-                    ]),
-                  ).values(),
-                ),
-              )}
+              packageAvailability={packageAvailability}
               initialValues={{
-                date: params.date ?? toDateInputValue(getToday()),
-                startTime: params.time ?? "08:00",
+                date: initialDate,
+                startTime: initialTime,
                 classTypeId: classTypes[0]?.id,
-                instructorId: instructors[0]?.id,
+                instructorId: defaultInstructorId || instructors[0]?.id,
                 title: classTypes[0]?.name,
                 capacity: classTypes[0]?.maxCapacity ?? 6,
               }}

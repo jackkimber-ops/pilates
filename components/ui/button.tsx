@@ -16,10 +16,10 @@ const VARIANT_STYLES: Record<ButtonVariant, string> = {
 };
 
 const SIZE_STYLES: Record<ButtonSize, string> = {
-  sm: "h-10 rounded-full px-4 text-sm",
-  md: "h-12 rounded-full px-5 text-[15px]",
-  lg: "h-14 rounded-full px-6 text-[15px]",
-  icon: "size-12 rounded-full",
+  sm: "h-9 rounded-full px-3.5 text-[13px]",
+  md: "h-10.5 rounded-full px-4 text-[14px]",
+  lg: "h-11.5 rounded-full px-5 text-[14px]",
+  icon: "size-10.5 rounded-full",
 };
 
 export function buttonStyles({
@@ -32,7 +32,7 @@ export function buttonStyles({
   className?: string;
 }) {
   return cn(
-    "inline-flex items-center justify-center gap-2.5 whitespace-nowrap font-semibold tracking-[0.01em] transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent-soft disabled:cursor-not-allowed disabled:opacity-50",
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold tracking-[0.01em] transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent-soft disabled:cursor-not-allowed disabled:opacity-50",
     VARIANT_STYLES[variant],
     SIZE_STYLES[size],
     className,

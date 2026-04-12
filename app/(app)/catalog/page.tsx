@@ -27,15 +27,11 @@ const ITEMS = [
 export default function CatalogPage() {
   return (
     <div className="space-y-8">
-      <PageHeader
-        eyebrow="Catalog"
-        title="Catalog"
-      />
+      <PageHeader title="Catalog" />
 
       <Card className="overflow-hidden p-0">
         <div className="px-6 py-5">
-          <p className="section-kicker">Setup</p>
-          <h2 className="mt-2 section-title">Core items</h2>
+          <h2 className="section-title">Core items</h2>
         </div>
 
         <div className="divide-y divide-line">
@@ -53,7 +49,6 @@ export default function CatalogPage() {
                       <h2 className="font-display text-[1.8rem] leading-none tracking-[-0.04em] text-ink">
                         {item.title}
                       </h2>
-                      <p className="max-w-2xl text-sm leading-7 text-muted">{item.description}</p>
                     </div>
                   </div>
                   <ArrowRight className="size-4 text-muted" />

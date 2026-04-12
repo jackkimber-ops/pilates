@@ -19,7 +19,6 @@ export default async function NewCustomerPage() {
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="Customers"
         title="Add customer"
       />
 
@@ -27,12 +26,7 @@ export default async function NewCustomerPage() {
         <div className="relative z-10 grid gap-5 xl:grid-cols-[1fr_460px]">
           <div className="order-2 space-y-4 xl:order-1">
             <Card variant="soft" className="space-y-5">
-              <div className="section-header">
-                <div className="space-y-2">
-                  <p className="section-kicker">Fields</p>
-                  <h2 className="section-title">Customer</h2>
-                </div>
-              </div>
+              <h2 className="section-title">Customer</h2>
               <div className="space-y-3">
                 <div className="list-row-quiet">
                   <p className="font-semibold text-ink">Name, contact, status, notes</p>
@@ -46,7 +40,6 @@ export default async function NewCustomerPage() {
 
           <Sheet
             className="order-1 xl:order-2"
-            eyebrow="New customer"
             title="Customer"
           >
             <CustomerForm redirectTo="/customers" classTypes={classTypes} />

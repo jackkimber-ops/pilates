@@ -66,7 +66,6 @@ export default async function SellTrialPackagePage({
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="Trials"
         title="Sell trial"
         actions={
           <Link href="/customers" className={buttonStyles({ variant: "secondary" })}>
@@ -80,10 +79,7 @@ export default async function SellTrialPackagePage({
           <div className="order-2 space-y-4 xl:order-1">
             <Card variant="soft" className="space-y-5">
               <div className="section-header">
-                <div className="space-y-2">
-                  <p className="section-kicker">Rules</p>
-                  <h2 className="section-title">Trial</h2>
-                </div>
+                <h2 className="section-title">Trial</h2>
                 <Badge tone="plum">New only</Badge>
               </div>
 
@@ -121,7 +117,7 @@ export default async function SellTrialPackagePage({
             </Card>
           </div>
 
-          <Sheet className="order-1 xl:order-2" eyebrow="Trial" title="Trial">
+          <Sheet className="order-1 xl:order-2" title="Trial">
             <TrialSaleForm
               redirectTo={params.customerId ? `/customers/${params.customerId}` : "/customers"}
               initialCustomerId={params.customerId}
@@ -151,10 +147,7 @@ export default async function SellTrialPackagePage({
 
             <div className="surface-inset rounded-[24px] p-4">
               <div className="section-header">
-                <div className="space-y-2">
-                  <p className="section-kicker">Summary</p>
-                  <h3 className="font-display text-[1.45rem] leading-none tracking-[-0.04em] text-ink">After save</h3>
-                </div>
+                <h3 className="font-display text-[1.45rem] leading-none tracking-[-0.04em] text-ink">After save</h3>
                 <Sparkles className="size-5 text-accent-strong" />
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">

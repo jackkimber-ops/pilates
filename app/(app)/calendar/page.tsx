@@ -19,15 +19,37 @@ export default async function CalendarPage() {
     prisma.session.findMany({
       where: {
         status: "SCHEDULED",
-        startsAt: {
-          gte: today,
-          lt: tomorrow,
+          startsAt: {
+            gte: today,
+            lt: tomorrow,
+          },
         },
-      },
-      include: {
-        instructor: true,
-        classType: true,
-        bookings: true,
+      select: {
+        id: true,
+        title: true,
+        startsAt: true,
+        capacity: true,
+        instructor: {
+          select: {
+            fullName: true,
+          },
+        },
+        classType: {
+          select: {
+            category: true,
+          },
+        },
+        _count: {
+          select: {
+            bookings: {
+              where: {
+                status: {
+                  not: "CANCELLED",
+                },
+              },
+            },
+          },
+        },
       },
       orderBy: {
         startsAt: "asc",
@@ -37,10 +59,33 @@ export default async function CalendarPage() {
       where: {
         status: "SCHEDULED",
       },
-      include: {
-        instructor: true,
-        classType: true,
-        bookings: true,
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        startsAt: true,
+        capacity: true,
+        instructor: {
+          select: {
+            fullName: true,
+          },
+        },
+        classType: {
+          select: {
+            category: true,
+          },
+        },
+        _count: {
+          select: {
+            bookings: {
+              where: {
+                status: {
+                  not: "CANCELLED",
+                },
+              },
+            },
+          },
+        },
       },
       orderBy: {
         startsAt: "asc",
@@ -49,17 +94,13 @@ export default async function CalendarPage() {
     }),
   ]);
 
-  const todayBookingCount = todaySessions.reduce(
-    (sum, session) => sum + session.bookings.filter((booking) => booking.status !== "CANCELLED").length,
-    0,
-  );
+  const todayBookingCount = todaySessions.reduce((sum, session) => sum + session._count.bookings, 0);
   const todayInstructorCount = new Set(todaySessions.map((session) => session.instructor.fullName)).size;
   const nextSession = upcomingSessions[0] ?? null;
 
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="Calendar"
         title="Calendar"
         actions={
           <Link href="/sessions/new" className={buttonStyles({ size: "lg" })}>
@@ -76,10 +117,7 @@ export default async function CalendarPage() {
           <div className="space-y-5 self-start xl:sticky xl:top-28">
             <Card variant="tint" className="space-y-5">
               <div className="section-header">
-                <div className="space-y-2">
-                  <p className="section-kicker">Today</p>
-                  <h2 className="section-title">Today</h2>
-                </div>
+                <h2 className="section-title">Today</h2>
                 <Badge tone="plum">Live</Badge>
               </div>
 
@@ -99,17 +137,13 @@ export default async function CalendarPage() {
               </div>
 
               <div className="surface-inset rounded-[24px] p-4">
-                <p className="section-kicker">Rules</p>
                 <p className="mt-3 text-sm leading-7 text-muted">No overlaps. 60 minutes.</p>
               </div>
             </Card>
 
             <Card variant="soft" className="space-y-4">
               <div className="section-header">
-                <div className="space-y-2">
-                  <p className="section-kicker">Next</p>
-                  <h2 className="section-title">Upcoming</h2>
-                </div>
+                <h2 className="section-title">Upcoming</h2>
                 <Badge tone="outline">Session list</Badge>
               </div>
 
@@ -135,8 +169,7 @@ export default async function CalendarPage() {
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-sm font-semibold text-ink">
-                        {nextSession.bookings.filter((booking) => booking.status !== "CANCELLED").length}/
-                        {nextSession.capacity} booked
+                        {nextSession._count.bookings}/{nextSession.capacity} booked
                       </p>
                       <p className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.16em] text-muted">
                         <Clock3 className="size-3.5" />
@@ -168,8 +201,7 @@ export default async function CalendarPage() {
                       </p>
                     </div>
                     <p className="text-sm font-semibold text-ink">
-                        {session.bookings.filter((booking) => booking.status !== "CANCELLED").length}/
-                        {session.capacity}
+                        {session._count.bookings}/{session.capacity}
                     </p>
                   </div>
                 </Link>

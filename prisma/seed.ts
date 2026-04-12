@@ -154,25 +154,6 @@ async function main() {
   await prisma.customer.deleteMany();
   await prisma.user.deleteMany();
 
-  const [ownerUser, opsUser] = await Promise.all([
-    prisma.user.create({
-      data: {
-        name: "Phuong",
-        email: "phuong@reform.local",
-        passwordHash,
-        role: UserRole.ADMIN,
-      },
-    }),
-    prisma.user.create({
-      data: {
-        name: "Phoebe",
-        email: "phoebe@reform.local",
-        passwordHash,
-        role: UserRole.ADMIN,
-      },
-    }),
-  ]);
-
   const [phuongInstructor, phoebeInstructor] = await Promise.all([
     prisma.instructor.create({
       data: {
@@ -182,6 +163,27 @@ async function main() {
     prisma.instructor.create({
       data: {
         fullName: "Phoebe",
+      },
+    }),
+  ]);
+
+  const [ownerUser, opsUser] = await Promise.all([
+    prisma.user.create({
+      data: {
+        name: "Phuong",
+        email: "phuong@reform.local",
+        passwordHash,
+        role: UserRole.ADMIN,
+        instructorId: phuongInstructor.id,
+      },
+    }),
+    prisma.user.create({
+      data: {
+        name: "Phoebe",
+        email: "phoebe@reform.local",
+        passwordHash,
+        role: UserRole.ADMIN,
+        instructorId: phoebeInstructor.id,
       },
     }),
   ]);

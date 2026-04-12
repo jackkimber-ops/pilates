@@ -6,6 +6,7 @@ import { buttonStyles } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Select } from "@/components/ui/input";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { compactList } from "@/lib/utils";
 
@@ -17,43 +18,83 @@ export default async function CustomersPage({
   const params = await searchParams;
   const search = params.q?.trim() ?? "";
   const status = params.status === "ACTIVE" || params.status === "INACTIVE" ? params.status : "ALL";
+  const today = new Date();
 
-  const customers = await prisma.customer.findMany({
-    where: {
-      status: status === "ALL" ? undefined : status,
-      OR: search
-        ? [
-            { fullName: { contains: search, mode: "insensitive" } },
-            { phone: { contains: search, mode: "insensitive" } },
-            { email: { contains: search, mode: "insensitive" } },
-          ]
-        : undefined,
-    },
-    include: {
-      packages: true,
-      singleClassPurchases: true,
-    },
-    orderBy: [{ status: "asc" }, { fullName: "asc" }],
-  });
+  const customerWhere: Prisma.CustomerWhereInput = {
+    status: status === "ALL" ? undefined : status,
+    OR: search
+      ? [
+          { fullName: { contains: search, mode: "insensitive" as const } },
+          { phone: { contains: search, mode: "insensitive" as const } },
+          { email: { contains: search, mode: "insensitive" as const } },
+        ]
+      : undefined,
+  };
+
+  const [customers, activeBalanceGroups, unusedSingleGroups] = await Promise.all([
+    prisma.customer.findMany({
+      where: customerWhere,
+      select: {
+        id: true,
+        fullName: true,
+        phone: true,
+        email: true,
+        tags: true,
+        status: true,
+      },
+      orderBy: [{ status: "asc" }, { fullName: "asc" }],
+    }),
+    prisma.customerPackage.groupBy({
+      by: ["customerId"],
+      where: {
+        customer: customerWhere,
+        active: true,
+        remainingCredits: {
+          gt: 0,
+        },
+        OR: [{ expiryDate: null }, { expiryDate: { gte: today } }],
+      },
+      _sum: {
+        remainingCredits: true,
+      },
+      _count: {
+        _all: true,
+      },
+    }),
+    prisma.singleClassPurchase.groupBy({
+      by: ["customerId"],
+      where: {
+        customer: customerWhere,
+        status: "UNUSED",
+      },
+      _count: {
+        _all: true,
+      },
+    }),
+  ]);
+
+  const balanceMap = new Map(
+    activeBalanceGroups.map((group) => [
+      group.customerId,
+      {
+        totalCredits: group._sum.remainingCredits ?? 0,
+        activePackages: group._count._all,
+      },
+    ]),
+  );
+
+  const unusedSinglesMap = new Map(
+    unusedSingleGroups.map((group) => [group.customerId, group._count._all]),
+  );
 
   const customerSummaries = customers.map((customer) => {
-    const activePackages = customer.packages.filter(
-      (customerPackage) =>
-        customerPackage.active &&
-        customerPackage.remainingCredits > 0 &&
-        (!customerPackage.expiryDate || customerPackage.expiryDate >= new Date()),
-    );
-    const totalCredits = activePackages.reduce(
-      (sum, customerPackage) => sum + customerPackage.remainingCredits,
-      0,
-    );
-    const unusedSingles = customer.singleClassPurchases.filter(
-      (purchase) => purchase.status === "UNUSED",
-    ).length;
+    const balanceSummary = balanceMap.get(customer.id);
+    const totalCredits = balanceSummary?.totalCredits ?? 0;
+    const unusedSingles = unusedSinglesMap.get(customer.id) ?? 0;
 
     return {
       customer,
-      activePackages,
+      activePackageCount: balanceSummary?.activePackages ?? 0,
       totalCredits,
       unusedSingles,
     };
@@ -66,7 +107,6 @@ export default async function CustomersPage({
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="Customers"
         title="Customers"
         actions={
           <Link href="/customers/new" className={buttonStyles({ size: "lg" })}>
@@ -78,10 +118,7 @@ export default async function CustomersPage({
 
       <section className="grid gap-5 xl:grid-cols-[0.86fr_1.14fr]">
         <Card variant="tint" className="space-y-5">
-          <div className="space-y-2">
-            <Badge tone="plum">Overview</Badge>
-            <h2 className="section-title">Customer book</h2>
-          </div>
+          <h2 className="section-title">Overview</h2>
 
           <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
             <div className="stat-shell">
@@ -102,10 +139,7 @@ export default async function CustomersPage({
 
         <Card variant="soft" className="space-y-4">
           <div className="section-header">
-            <div className="space-y-2">
-              <p className="section-kicker">Filter</p>
-              <h2 className="section-title">Search</h2>
-            </div>
+            <h2 className="section-title">Search</h2>
             <Badge tone="outline">Live</Badge>
           </div>
 
@@ -136,15 +170,12 @@ export default async function CustomersPage({
 
       <Card className="space-y-5 p-0">
         <div className="flex flex-col gap-2 px-6 pt-6 md:flex-row md:items-end md:justify-between">
-          <div className="space-y-2">
-            <p className="section-kicker">List</p>
-            <h2 className="section-title">Customers</h2>
-          </div>
+          <h2 className="section-title">Customers</h2>
         </div>
 
         {customerSummaries.length ? (
           <div className="space-y-3 px-4 pb-4 md:px-5 md:pb-5">
-            {customerSummaries.map(({ customer, activePackages, totalCredits, unusedSingles }) => (
+            {customerSummaries.map(({ customer, activePackageCount, totalCredits, unusedSingles }) => (
               <Link key={customer.id} href={`/customers/${customer.id}`} className="list-row block">
                 <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
                   <div className="space-y-3">
@@ -177,7 +208,7 @@ export default async function CustomersPage({
                     <div className="stat-shell">
                       <p className="stat-label">Packages</p>
                       <p className="mt-2 text-2xl font-display tracking-[-0.04em] text-ink">
-                        {activePackages.length}
+                        {activePackageCount}
                       </p>
                     </div>
                     <div className="stat-shell">

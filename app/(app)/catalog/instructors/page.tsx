@@ -21,10 +21,7 @@ export default async function InstructorsPage({
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        eyebrow="Catalog"
-        title="Instructors"
-      />
+      <PageHeader title="Instructors" />
 
       <div className="grid gap-6 xl:grid-cols-[0.96fr_1.04fr]">
         <Card variant="tint">
@@ -44,8 +41,7 @@ export default async function InstructorsPage({
 
         <Card className="overflow-hidden p-0">
           <div className="px-6 py-5">
-            <p className="section-kicker">List</p>
-            <h2 className="mt-2 section-title">Instructors</h2>
+            <h2 className="section-title">Instructors</h2>
           </div>
 
           {instructors.length ? (

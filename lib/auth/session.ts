@@ -61,8 +61,18 @@ export const getCurrentUser = cache(async () => {
     where: {
       sessionTokenHash,
     },
-    include: {
-      user: true,
+    select: {
+      id: true,
+      expiresAt: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          instructorId: true,
+        },
+      },
     },
   });
 

@@ -18,10 +18,10 @@ import { ShellMenu } from "@/components/layout/shell-menu";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", shortLabel: "Home", icon: Layers3 },
-  { href: "/customers", label: "Customers", shortLabel: "Clients", icon: Users2 },
-  { href: "/calendar", label: "Calendar", shortLabel: "Schedule", icon: CalendarDays },
-  { href: "/sales/package", label: "Sell package", shortLabel: "Package", icon: CircleDollarSign },
-  { href: "/sales/single", label: "Sell one-off", shortLabel: "One-off", icon: TicketPlus },
+  { href: "/customers", label: "Customers", shortLabel: "Customers", icon: Users2 },
+  { href: "/calendar", label: "Calendar", shortLabel: "Calendar", icon: CalendarDays },
+  { href: "/sales/package", label: "Packages", shortLabel: "Packages", icon: CircleDollarSign },
+  { href: "/sales/single", label: "One-offs", shortLabel: "One-offs", icon: TicketPlus },
   { href: "/recurring", label: "Recurring", shortLabel: "Recurring", icon: Repeat2 },
   { href: "/reports", label: "Reports", shortLabel: "Reports", icon: BarChart3 },
   { href: "/catalog", label: "Catalog", shortLabel: "Catalog", icon: Package2 },
@@ -41,7 +41,7 @@ const MOBILE_MENU_ITEMS = [
   },
   {
     href: "/sales/single",
-    label: "Sell one-off",
+    label: "One-offs",
   },
   {
     href: "/recurring",

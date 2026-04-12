@@ -26,10 +26,35 @@ export default async function DashboardPage() {
             lt: tomorrow,
           },
         },
-        include: {
-          instructor: true,
-          classType: true,
-          bookings: true,
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          startsAt: true,
+          startTime: true,
+          capacity: true,
+          instructor: {
+            select: {
+              fullName: true,
+            },
+          },
+          classType: {
+            select: {
+              name: true,
+              category: true,
+            },
+          },
+          _count: {
+            select: {
+              bookings: {
+                where: {
+                  status: {
+                    not: "CANCELLED",
+                  },
+                },
+              },
+            },
+          },
         },
         orderBy: {
           startsAt: "asc",
@@ -42,10 +67,33 @@ export default async function DashboardPage() {
             gte: today,
           },
         },
-        include: {
-          instructor: true,
-          classType: true,
-          bookings: true,
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          startsAt: true,
+          capacity: true,
+          instructor: {
+            select: {
+              fullName: true,
+            },
+          },
+          classType: {
+            select: {
+              category: true,
+            },
+          },
+          _count: {
+            select: {
+              bookings: {
+                where: {
+                  status: {
+                    not: "CANCELLED",
+                  },
+                },
+              },
+            },
+          },
         },
         orderBy: {
           startsAt: "asc",
@@ -61,10 +109,28 @@ export default async function DashboardPage() {
           },
           OR: [{ expiryDate: null }, { expiryDate: { gte: today } }],
         },
-        include: {
-          classType: true,
-          customer: true,
-          packageTemplate: true,
+        select: {
+          id: true,
+          customerId: true,
+          sourceType: true,
+          remainingCredits: true,
+          expiryDate: true,
+          classType: {
+            select: {
+              name: true,
+              category: true,
+            },
+          },
+          customer: {
+            select: {
+              fullName: true,
+            },
+          },
+          packageTemplate: {
+            select: {
+              name: true,
+            },
+          },
         },
         orderBy: [{ remainingCredits: "asc" }, { purchaseDate: "asc" }],
         take: 6,
@@ -78,10 +144,28 @@ export default async function DashboardPage() {
             gt: 0,
           },
         },
-        include: {
-          classType: true,
-          customer: true,
-          packageTemplate: true,
+        select: {
+          id: true,
+          customerId: true,
+          sourceType: true,
+          remainingCredits: true,
+          expiryDate: true,
+          classType: {
+            select: {
+              name: true,
+              category: true,
+            },
+          },
+          customer: {
+            select: {
+              fullName: true,
+            },
+          },
+          packageTemplate: {
+            select: {
+              name: true,
+            },
+          },
         },
         orderBy: {
           expiryDate: "desc",
@@ -92,9 +176,22 @@ export default async function DashboardPage() {
         where: {
           status: "UNUSED",
         },
-        include: {
-          customer: true,
-          classType: true,
+        select: {
+          id: true,
+          customerId: true,
+          category: true,
+          amountPaid: true,
+          status: true,
+          customer: {
+            select: {
+              fullName: true,
+            },
+          },
+          classType: {
+            select: {
+              name: true,
+            },
+          },
         },
         orderBy: [{ expiryDate: "asc" }, { purchaseDate: "asc" }],
         take: 6,
@@ -105,46 +202,37 @@ export default async function DashboardPage() {
     {
       href: "/customers/new",
       label: "Add customer",
-      description: "New",
       icon: Users2,
     },
     {
       href: "/sales/package",
       label: "Sell package",
-      description: "Package",
       icon: CircleDollarSign,
     },
     {
       href: "/sales/trial",
       label: "Trials",
-      description: "Trial",
       icon: Sparkles,
     },
     {
       href: "/calendar",
       label: "Calendar",
-      description: "Schedule",
       icon: CalendarDays,
     },
     {
       href: "/recurring",
       label: "Recurring",
-      description: "Rules",
       icon: Clock3,
     },
   ];
 
-  const totalTodayBookings = todaysSessions.reduce(
-    (sum, session) => sum + session.bookings.filter((booking) => booking.status !== "CANCELLED").length,
-    0,
-  );
+  const totalTodayBookings = todaysSessions.reduce((sum, session) => sum + session._count.bookings, 0);
   const nextSession = upcomingSessions[0] ?? null;
   const followUpCount = lowBalancePackages.length + expiredPackages.length;
 
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="Dashboard"
         title="Dashboard"
         actions={
           <Link href="/sessions/new" className={buttonStyles({ size: "lg" })}>
@@ -157,7 +245,6 @@ export default async function DashboardPage() {
       <section className="grid gap-6 xl:grid-cols-[1.06fr_0.94fr]">
         <Card variant="tint" className="space-y-7 overflow-hidden">
           <div className="space-y-3">
-            <Badge tone="plum">Today</Badge>
             <h2 className="section-title max-w-xl">Overview</h2>
           </div>
 
@@ -191,7 +278,6 @@ export default async function DashboardPage() {
                       </div>
                       <div className="space-y-1">
                         <p className="text-base font-semibold text-ink">{item.label}</p>
-                        <p className="text-sm leading-6 text-muted">{item.description}</p>
                       </div>
                     </div>
                     <ArrowRight className="mt-1 size-4 text-muted transition-transform group-hover:translate-x-0.5" />
@@ -212,10 +298,7 @@ export default async function DashboardPage() {
         <div className="space-y-5">
           <Card variant="soft" className="space-y-5">
               <div className="section-header">
-                <div className="space-y-2">
-                <p className="section-kicker">Next</p>
                 <h2 className="section-title">Next session</h2>
-              </div>
               <Badge tone="outline">Live</Badge>
             </div>
 
@@ -236,7 +319,7 @@ export default async function DashboardPage() {
                       {compactList([
                           toDateTimeLabel(nextSession.startsAt),
                           nextSession.instructor.fullName,
-                          `${nextSession.bookings.filter((booking) => booking.status !== "CANCELLED").length}/${nextSession.capacity} booked`,
+                          `${nextSession._count.bookings}/${nextSession.capacity} booked`,
                         ])}
                       </p>
                   </div>
@@ -259,7 +342,7 @@ export default async function DashboardPage() {
                         {compactList([
                           toDateTimeLabel(session.startsAt),
                           session.instructor.fullName,
-                          `${session.bookings.filter((booking) => booking.status !== "CANCELLED").length}/${session.capacity} booked`,
+                          `${session._count.bookings}/${session.capacity} booked`,
                         ])}
                       </p>
                     </div>
@@ -278,10 +361,7 @@ export default async function DashboardPage() {
 
           <Card variant="soft" className="space-y-4">
             <div className="section-header">
-              <div className="space-y-2">
-                <p className="section-kicker">Watchlist</p>
-                <h2 className="section-title">Follow-up</h2>
-              </div>
+              <h2 className="section-title">Follow-up</h2>
               <Badge tone="warm">Actionable</Badge>
             </div>
             <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
@@ -310,10 +390,7 @@ export default async function DashboardPage() {
 
       <Card className="space-y-6">
         <div className="section-header">
-          <div className="space-y-2">
-            <p className="section-kicker">Today</p>
-            <h2 className="section-title">Sessions</h2>
-          </div>
+          <h2 className="section-title">Today</h2>
         </div>
 
         <div className="space-y-3">
@@ -336,7 +413,7 @@ export default async function DashboardPage() {
                         {compactList([
                           session.classType.name,
                           session.instructor.fullName,
-                          `${session.bookings.filter((booking) => booking.status !== "CANCELLED").length}/${session.capacity} booked`,
+                          `${session._count.bookings}/${session.capacity} booked`,
                         ])}
                       </p>
                     </div>
@@ -369,10 +446,7 @@ export default async function DashboardPage() {
 
       <section className="grid gap-5 xl:grid-cols-3">
         <Card className="space-y-4">
-          <div className="space-y-2">
-            <p className="section-kicker">Low balances</p>
-            <h2 className="section-title">Balances to watch</h2>
-          </div>
+          <h2 className="section-title">Low balances</h2>
 
           <div className="space-y-3">
             {lowBalancePackages.length ? (
@@ -414,10 +488,7 @@ export default async function DashboardPage() {
         </Card>
 
         <Card className="space-y-4">
-          <div className="space-y-2">
-            <p className="section-kicker">Expired</p>
-            <h2 className="section-title">Expired packages</h2>
-          </div>
+          <h2 className="section-title">Expired packages</h2>
 
           <div className="space-y-3">
             {expiredPackages.length ? (
@@ -442,10 +513,7 @@ export default async function DashboardPage() {
         </Card>
 
         <Card className="space-y-4">
-          <div className="space-y-2">
-            <p className="section-kicker">One-offs</p>
-            <h2 className="section-title">Unused single classes</h2>
-          </div>
+          <h2 className="section-title">One-offs</h2>
 
           <div className="space-y-3">
             {unusedSingles.length ? (

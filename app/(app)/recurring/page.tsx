@@ -69,17 +69,11 @@ export default async function RecurringPage({
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        eyebrow="Recurring"
-        title="Recurring"
-      />
+      <PageHeader title="Recurring" />
 
       <div className="grid gap-6 xl:grid-cols-[0.96fr_1.04fr]">
         <Card variant="tint" className="space-y-5">
-          <div className="space-y-2">
-            <p className="section-kicker">New</p>
-            <h2 className="section-title">Rule</h2>
-          </div>
+          <h2 className="section-title">New rule</h2>
 
           <RecurringRuleForm
             redirectTo="/recurring"
@@ -140,7 +134,7 @@ export default async function RecurringPage({
                     </div>
 
                     <div className="surface-inset rounded-[24px] p-4">
-                      <p className="section-kicker">Generate</p>
+                      <p className="font-semibold text-ink">Generate</p>
                       <div className="mt-4">
                         <RecurringGenerationForm
                           ruleId={rule.id}

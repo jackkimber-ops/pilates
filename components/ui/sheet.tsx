@@ -19,14 +19,11 @@ export function Sheet({
   return (
     <section className={cn("sheet-shell", className)}>
       <div className="sheet-handle md:hidden" />
-      <div className="space-y-2">
-        {eyebrow ? <p className="section-kicker">{eyebrow}</p> : null}
-        <div className="space-y-1.5">
-          <h2 className="section-title">{title}</h2>
-          {description ? <p className="max-w-2xl text-sm leading-6 text-muted">{description}</p> : null}
-        </div>
+      <div className="space-y-1.5">
+        <h2 className="section-title">{title}</h2>
+        {description ? <p className="max-w-2xl text-sm leading-6 text-muted">{description}</p> : null}
       </div>
-      <div className="mt-6 space-y-6">{children}</div>
+      <div className="mt-5 space-y-5">{children}</div>
       {footer ? <div className="sheet-footer">{footer}</div> : null}
     </section>
   );

@@ -72,6 +72,49 @@ body::before {
   opacity: 0.9;
 }
 
+html[data-nav-loading="true"],
+html[data-nav-loading="true"] body,
+html[data-nav-loading="true"] a,
+html[data-nav-loading="true"] button,
+html[data-nav-loading="true"] input,
+html[data-nav-loading="true"] select,
+html[data-nav-loading="true"] textarea {
+  cursor: progress !important;
+}
+
+.navigation-progress {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 120;
+  height: 3px;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    linear-gradient(90deg, rgba(123, 90, 98, 0) 0%, rgba(123, 90, 98, 0.72) 18%, rgba(123, 90, 98, 0.96) 50%, rgba(123, 90, 98, 0.72) 82%, rgba(123, 90, 98, 0) 100%);
+  transform: scaleX(0.08);
+  transform-origin: left center;
+  transition: opacity 120ms ease;
+}
+
+.navigation-progress-active {
+  opacity: 1;
+  animation: navigation-progress-run 1.15s ease-in-out infinite;
+}
+
+@keyframes navigation-progress-run {
+  0% {
+    transform: translateX(-18%) scaleX(0.12);
+  }
+
+  50% {
+    transform: translateX(22%) scaleX(0.52);
+  }
+
+  100% {
+    transform: translateX(84%) scaleX(0.18);
+  }
+}
+
 ::selection {
   background: rgba(123, 90, 98, 0.16);
 }
@@ -120,11 +163,11 @@ textarea {
 
 .editorial-title {
   @apply font-display leading-[0.9] tracking-[-0.055em] text-ink;
-  font-size: clamp(2.55rem, 4.9vw, 5rem);
+  font-size: clamp(2.25rem, 4.2vw, 4.2rem);
 }
 
 .section-title {
-  @apply font-display text-[1.92rem] leading-[0.92] tracking-[-0.05em] text-ink md:text-[2.45rem];
+  @apply font-display text-[1.55rem] leading-[0.94] tracking-[-0.045em] text-ink md:text-[1.9rem];
 }
 
 .list-row {
@@ -136,7 +179,7 @@ textarea {
     background 160ms ease,
     transform 160ms ease,
     box-shadow 160ms ease;
-  @apply rounded-[28px] px-5 py-5;
+  @apply rounded-[26px] px-4 py-4;
 }
 
 .list-row:hover {
@@ -150,13 +193,13 @@ textarea {
 .list-row-quiet {
   background: rgba(255, 252, 249, 0.52);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.64);
-  @apply rounded-[24px] px-4 py-3.5;
+  @apply rounded-[22px] px-3.5 py-3;
 }
 
 .stat-shell {
   background: rgba(255, 252, 249, 0.62);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  @apply rounded-[28px] px-4 py-4 md:px-5;
+  @apply rounded-[24px] px-3.5 py-3.5 md:px-4;
 }
 
 .stat-label {
@@ -170,17 +213,17 @@ textarea {
 .empty-state {
   background: linear-gradient(180deg, rgba(255, 252, 249, 0.72), rgba(250, 244, 239, 0.56));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
-  @apply rounded-[28px] px-5 py-8 text-sm leading-6 text-muted;
+  @apply rounded-[24px] px-4 py-6 text-sm leading-6 text-muted;
 }
 
 .segmented-control {
   background: rgba(247, 240, 235, 0.88);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.66);
-  @apply inline-flex w-full gap-1 rounded-[24px] p-1.5;
+  @apply inline-flex w-full gap-1 rounded-[22px] p-1;
 }
 
 .segmented-option {
-  @apply flex-1 rounded-[20px] px-3 py-3 text-center text-sm font-semibold text-muted transition;
+  @apply flex-1 rounded-[18px] px-3 py-2.5 text-center text-[13px] font-semibold text-muted transition;
 }
 
 .segmented-option-active {
@@ -194,7 +237,7 @@ textarea {
   background: linear-gradient(180deg, rgba(255, 252, 249, 0.98), rgba(251, 245, 240, 0.94));
   -webkit-appearance: none;
   appearance: none;
-  @apply h-14 rounded-[22px] px-4 text-[0.98rem] text-ink outline-none transition-all duration-200 placeholder:text-muted focus:bg-white;
+  @apply h-12 rounded-[20px] px-4 text-[0.95rem] text-ink outline-none transition-all duration-200 placeholder:text-muted focus:bg-white;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.82),
     inset 0 -1px 0 rgba(214, 202, 194, 0.2),
@@ -204,7 +247,7 @@ textarea {
 .field-textarea {
   border: 1px solid rgba(160, 143, 132, 0.58);
   background: linear-gradient(180deg, rgba(255, 252, 249, 0.98), rgba(251, 245, 240, 0.94));
-  @apply min-h-[132px] rounded-[24px] px-4 py-3.5 text-[0.98rem] leading-7 text-ink outline-none transition-all duration-200 placeholder:text-muted focus:bg-white;
+  @apply min-h-[112px] rounded-[22px] px-4 py-3 text-[0.95rem] leading-6 text-ink outline-none transition-all duration-200 placeholder:text-muted focus:bg-white;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.82),
     inset 0 -1px 0 rgba(214, 202, 194, 0.2),
@@ -286,18 +329,18 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .page-shell {
-  @apply mx-auto w-full max-w-[1440px] px-4 pb-40 pt-4 md:px-6 md:pt-6 lg:px-8 lg:pb-12;
+  @apply mx-auto w-full max-w-[1440px] px-4 pb-36 pt-4 md:px-6 md:pt-5 lg:px-8 lg:pb-10;
 }
 
 .page-stack {
-  @apply space-y-8 md:space-y-10;
+  @apply space-y-6 md:space-y-8;
 }
 
 .top-app-bar {
   background: rgba(255, 250, 246, 0.78);
   box-shadow: 0 28px 54px -42px rgba(74, 56, 51, 0.28);
   backdrop-filter: blur(16px);
-  @apply sticky top-3 z-30 rounded-[30px] px-4 py-4 md:px-5;
+  @apply sticky top-3 z-30 rounded-[28px] px-4 py-3.5 md:px-4;
 }
 
 .app-shell-grid {
@@ -305,11 +348,11 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .top-app-bar-chip {
-  @apply rounded-full bg-white/76 px-3.5 py-2 text-sm text-muted shadow-[0_16px_34px_-30px_rgba(74,56,51,0.18)];
+  @apply rounded-full bg-white/76 px-3 py-1.5 text-[13px] text-muted shadow-[0_16px_34px_-30px_rgba(74,56,51,0.18)];
 }
 
 .page-intro {
-  @apply flex flex-col gap-5 md:flex-row md:items-end md:justify-between;
+  @apply flex flex-col gap-3 md:flex-row md:items-end md:justify-between;
 }
 
 .section-header {
@@ -321,11 +364,11 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .metric-number {
-  @apply font-display text-[2.8rem] leading-none tracking-[-0.06em] text-ink;
+  @apply font-display text-[2.35rem] leading-none tracking-[-0.05em] text-ink;
 }
 
 .metric-caption {
-  @apply mt-2 text-[0.92rem] leading-6 text-muted;
+  @apply mt-1.5 text-[0.88rem] leading-5 text-muted;
 }
 
 .chip-row {
@@ -351,7 +394,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
     rgba(255, 250, 247, 0.92);
   box-shadow: var(--shadow-sheet);
   backdrop-filter: blur(20px);
-  @apply rounded-[34px] p-5 md:p-6;
+  @apply rounded-[30px] p-4 md:p-5;
 }
 
 .sheet-handle {
@@ -359,7 +402,21 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .sheet-footer {
-  @apply sticky bottom-0 mt-6 border-t border-line/70 bg-gradient-to-t from-[rgba(255,250,247,0.94)] via-[rgba(255,250,247,0.94)] to-transparent pt-4;
+  @apply sticky bottom-0 mt-5 border-t border-line/70 bg-gradient-to-t from-[rgba(255,250,247,0.94)] via-[rgba(255,250,247,0.94)] to-transparent pt-3;
+}
+
+.calendar-detail-overlay {
+  @apply fixed inset-0 z-[70] flex items-end justify-end md:items-stretch;
+}
+
+.calendar-detail-backdrop {
+  background: rgba(62, 46, 43, 0.28);
+  backdrop-filter: blur(6px);
+  @apply absolute inset-0;
+}
+
+.calendar-detail-sheet {
+  @apply relative z-[1] flex max-h-[92vh] w-full max-w-[640px] flex-col overflow-y-auto rounded-b-none rounded-t-[32px] md:my-4 md:mr-4 md:max-h-[calc(100vh-2rem)] md:rounded-[34px];
 }
 
 .session-drawer-hero {
@@ -459,12 +516,12 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 
 .action-dock {
   background: linear-gradient(180deg, rgba(255, 250, 246, 0), rgba(255, 250, 246, 0.94) 26%, rgba(255, 250, 246, 0.98) 100%);
-  @apply pointer-events-none sticky z-20 -mx-1 mt-8 px-1 pt-4;
+  @apply pointer-events-none sticky z-20 -mx-1 mt-6 px-1 pt-3;
   bottom: calc(env(safe-area-inset-bottom, 0px) + 6.85rem);
 }
 
 .action-dock-panel {
-  @apply pointer-events-auto rounded-[26px] bg-white/88 px-4 py-3.5 shadow-[0_24px_44px_-30px_rgba(74,56,51,0.22)] backdrop-blur-md;
+  @apply pointer-events-auto rounded-[24px] bg-white/88 px-3.5 py-3 shadow-[0_24px_44px_-30px_rgba(74,56,51,0.22)] backdrop-blur-md;
 }
 
 .shell-menu {
@@ -487,7 +544,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.84),
     0 18px 30px -30px rgba(74, 56, 51, 0.14);
-  @apply block rounded-[22px] px-4 py-3.5 text-ink transition;
+  @apply block rounded-[20px] px-4 py-3 text-ink transition;
 }
 
 .shell-menu-link:hover {
@@ -537,11 +594,11 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .mobile-section-link {
-  @apply inline-flex h-10 items-center justify-center whitespace-nowrap rounded-[18px] px-3.5 text-[0.78rem] font-semibold tracking-[0.02em] text-muted transition hover:bg-white/76 hover:text-ink;
+  @apply inline-flex h-9 items-center justify-center whitespace-nowrap rounded-[16px] px-3 text-[0.76rem] font-semibold tracking-[0.02em] text-muted transition hover:bg-white/76 hover:text-ink;
 }
 
 .sidebar-nav {
-  @apply space-y-2.5;
+  @apply space-y-2;
 }
 
 .sidebar-nav-link {
@@ -550,7 +607,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.76),
     0 18px 34px -34px rgba(74, 56, 51, 0.1);
-  @apply flex items-center gap-3 rounded-[26px] px-4 py-3.5 text-[15px] font-semibold text-ink/82 transition-all duration-200;
+  @apply flex items-center gap-3 rounded-[24px] px-3.5 py-3 text-[14px] font-semibold text-ink/82 transition-all duration-200;
 }
 
 .sidebar-nav-link:hover {
@@ -584,7 +641,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 .sidebar-nav-icon {
   background: rgba(255, 255, 255, 0.56);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
-  @apply flex size-10 items-center justify-center rounded-[20px] text-ink/72 transition-all duration-200;
+  @apply flex size-9 items-center justify-center rounded-[18px] text-ink/72 transition-all duration-200;
 }
 
 .sidebar-nav-link:hover .sidebar-nav-icon {
@@ -635,7 +692,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
     linear-gradient(180deg, rgba(255, 252, 249, 0.82), rgba(248, 239, 234, 0.64)),
     rgba(255, 250, 247, 0.6);
   box-shadow: var(--shadow-lift);
-  @apply relative overflow-hidden rounded-[36px] p-4 md:p-6;
+  @apply relative overflow-hidden rounded-[32px] p-3.5 md:p-5;
 }
 
 .mock-stage::before {
@@ -649,7 +706,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .drawer-preview {
-  @apply relative rounded-[28px] border border-white/70 bg-white/45 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)];
+  @apply relative rounded-[24px] border border-white/70 bg-white/45 p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)];
 }
 
 .calendar-shell {
@@ -657,11 +714,11 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
     linear-gradient(180deg, rgba(255, 251, 248, 0.96), rgba(255, 247, 243, 0.84)),
     rgba(255, 250, 247, 0.82);
   box-shadow: var(--shadow-lift);
-  @apply rounded-[34px] p-4 md:p-6;
+  @apply rounded-[30px] p-3.5 md:p-5;
 }
 
 .calendar-board-footer {
-  @apply flex flex-col gap-3 rounded-[26px] bg-[rgba(255,252,249,0.68)] px-4 py-4 md:flex-row md:items-center md:justify-between;
+  @apply flex flex-col gap-3 rounded-[22px] bg-[rgba(255,252,249,0.68)] px-4 py-3.5 md:flex-row md:items-center md:justify-between;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68);
 }
 
@@ -928,15 +985,19 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
   }
 
   .calendar-shell {
-    @apply rounded-[30px] p-3;
+    @apply rounded-[28px] p-3;
   }
 
   .mock-stage {
-    @apply rounded-[32px] p-3;
+    @apply rounded-[28px] p-3;
   }
 
   .sheet-shell {
-    @apply rounded-[30px] px-4 py-4;
+    @apply rounded-[28px] px-4 py-4;
+  }
+
+  .calendar-detail-sheet {
+    @apply max-h-[94vh] rounded-b-none rounded-t-[28px];
   }
 
   .session-drawer-hero {
@@ -956,11 +1017,11 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
   }
 
   .list-row {
-    @apply px-4 py-4;
+    @apply px-4 py-3.5;
   }
 
   .stat-shell {
-    @apply rounded-[24px] px-4 py-3.5;
+    @apply rounded-[22px] px-4 py-3;
   }
 
   .calendar-event-shell-month {
