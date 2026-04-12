@@ -133,6 +133,7 @@ export function SessionForm({
   const [title, setTitle] = useState(initialValues?.title ?? selectedClassType?.name ?? "");
   const [capacity, setCapacity] = useState(initialValues?.capacity ?? selectedClassType?.maxCapacity ?? 6);
   const [notes, setNotes] = useState(initialValues?.notes ?? "");
+  const [recurringWeekly, setRecurringWeekly] = useState(false);
   const parsedInitialTime = parseStartTime(initialValues?.startTime);
   const [selectedHour, setSelectedHour] = useState(parsedInitialTime.hour12);
   const [selectedMinute, setSelectedMinute] = useState(parsedInitialTime.minute);
@@ -257,7 +258,7 @@ export function SessionForm({
                     {selectedPackageAvailability.sourceType === "IMPORTED" ? "Imported balance" : "Package"}
                   </span>
                 </p>
-                <p>1 credit will be used.</p>
+                <p>Credits are deducted on attendance.</p>
               </>
             ) : selectedCustomerId ? (
               <p>Matching balance required.</p>
@@ -348,6 +349,26 @@ export function SessionForm({
         <Textarea id="notes" name="notes" value={notes} onChange={(event) => setNotes(event.target.value)} />
       </Field>
 
+      {isCreateMode ? (
+        <div className="space-y-2">
+          <label className="surface-inset flex items-center gap-3 rounded-[22px] px-4 py-3 text-sm font-medium text-ink">
+            <input
+              name="recurringWeekly"
+              type="checkbox"
+              className="field-checkbox"
+              checked={recurringWeekly}
+              onChange={(event) => setRecurringWeekly(event.target.checked)}
+            />
+            Recurring weekly
+          </label>
+          {recurringWeekly ? (
+            <p className="px-1 text-sm leading-6 text-muted">
+              Creates weekly sessions. Credits are deducted only when attended.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       <label className="surface-inset flex items-center gap-3 rounded-[22px] px-4 py-3 text-sm font-medium text-ink">
         <input
           name="syncToGoogle"
@@ -368,7 +389,7 @@ export function SessionForm({
               pendingLabel={pendingLabel ?? (initialValues?.id ? "Saving..." : "Creating...")}
               disabled={missingPackage}
             >
-              {submitLabel ?? (initialValues?.id ? "Save session" : "Create and book")}
+              {submitLabel ?? (initialValues?.id ? "Save session" : "Create session")}
             </SubmitButton>
           </div>
         </div>

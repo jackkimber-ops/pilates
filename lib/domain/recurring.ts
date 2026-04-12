@@ -1,7 +1,11 @@
 import { Weekday } from "@prisma/client";
-import { addDays, addMinutes, eachDayOfInterval } from "date-fns";
+import { addDays, addMinutes, addWeeks, eachDayOfInterval } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
-import { APP_TIMEZONE, DEFAULT_RECURRING_GENERATION_DAYS } from "@/lib/constants";
+import {
+  APP_TIMEZONE,
+  DEFAULT_RECURRING_GENERATION_DAYS,
+  DEFAULT_WEEKLY_RECURRING_OCCURRENCES,
+} from "@/lib/constants";
 import { logAudit } from "@/lib/audit";
 import { createBooking } from "@/lib/domain/bookings";
 import { createSession } from "@/lib/domain/sessions";
@@ -116,6 +120,7 @@ export async function generateRecurringBookings(input: {
   ruleId: string;
   startDate?: string;
   endDate?: string;
+  syncToGoogle?: boolean;
   userId?: string;
 }) {
   const rule = await prisma.recurringBookingRule.findUnique({
@@ -193,6 +198,7 @@ export async function generateRecurringBookings(input: {
         startTime: rule.startTime,
         capacity: rule.classType.maxCapacity,
         notes: ["Recurring", rule.notes].filter(Boolean).join(" / "),
+        syncToGoogle: input.syncToGoogle,
         recurringBookingRuleId: rule.id,
         userId: input.userId,
       });
@@ -229,9 +235,123 @@ export async function generateRecurringBookings(input: {
 
   return {
     createdCount: createdSessionIds.length,
+    createdSessionIds,
     conflicts,
     existing,
     startDate,
     endDate,
+  };
+}
+
+export async function createWeeklyRecurringSeries(input: {
+  customerId: string;
+  classTypeId: string;
+  instructorId: string;
+  title: string;
+  date: string;
+  startTime: string;
+  capacity: number;
+  notes?: string;
+  syncToGoogle?: boolean;
+  occurrences?: number;
+  userId?: string;
+}) {
+  const classType = await prisma.classType.findUnique({
+    where: {
+      id: input.classTypeId,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!classType) {
+    throw new Error("Class type not found.");
+  }
+
+  const occurrences = input.occurrences ?? DEFAULT_WEEKLY_RECURRING_OCCURRENCES;
+  const startDate = input.date;
+  const endDate = toDateInputValue(addWeeks(toStoredDate(startDate), occurrences - 1));
+  const weekday = formatInTimeZone(combineDateAndTime(input.date, "12:00"), APP_TIMEZONE, "EEEE").toUpperCase() as Weekday;
+
+  const rule = await createRecurringRule({
+    customerId: input.customerId,
+    classTypeId: input.classTypeId,
+    instructorId: input.instructorId,
+    dayOfWeek: weekday,
+    startTime: input.startTime,
+    startDate,
+    endDate,
+    active: true,
+    notes: input.notes,
+    paymentSourceType: "PACKAGE",
+    userId: input.userId,
+  });
+
+  const createdSessionIds: string[] = [];
+  const conflicts: string[] = [];
+
+  for (let index = 0; index < occurrences; index += 1) {
+    const candidateDate = toDateInputValue(addWeeks(toStoredDate(startDate), index));
+
+    try {
+      const session = await createSession({
+        classTypeId: input.classTypeId,
+        instructorId: input.instructorId,
+        title: input.title,
+        date: candidateDate,
+        startTime: input.startTime,
+        capacity: input.capacity,
+        notes: input.notes,
+        syncToGoogle: input.syncToGoogle,
+        recurringBookingRuleId: rule.id,
+        userId: input.userId,
+      });
+
+      await createBooking({
+        sessionId: session.id,
+        customerId: input.customerId,
+        paymentSourceType: "PACKAGE",
+        recurringBookingRuleId: rule.id,
+        userId: input.userId,
+      });
+
+      createdSessionIds.push(session.id);
+    } catch (error) {
+      conflicts.push(error instanceof Error ? `${candidateDate} (${error.message})` : candidateDate);
+    }
+  }
+
+  if (!createdSessionIds.length) {
+    await prisma.recurringBookingRule.delete({
+      where: {
+        id: rule.id,
+      },
+    });
+
+    throw new Error(conflicts[0]?.replace(/^\d{4}-\d{2}-\d{2}\s\((.*)\)$/, "$1") ?? "No weekly sessions created.");
+  }
+
+  await logAudit({
+    userId: input.userId,
+    entityType: "RecurringBookingRule",
+    entityId: rule.id,
+    action: "CREATE_WEEKLY_RECURRING_SERIES",
+    details: {
+      startDate,
+      endDate,
+      createdSessionIds,
+      conflicts,
+      occurrences,
+    },
+  });
+
+  return {
+    ruleId: rule.id,
+    createdSessionIds,
+    conflicts,
+    startDate,
+    endDate,
+    createdCount: createdSessionIds.length,
   };
 }

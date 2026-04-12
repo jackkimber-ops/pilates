@@ -262,6 +262,7 @@ export const sessionFormSchema = z.object({
   capacity: integerNumber.min(1).max(6),
   notes: optionalString(),
   syncToGoogle: z.preprocess(checkboxToBoolean, z.boolean()),
+  recurringWeekly: z.preprocess(checkboxToBoolean, z.boolean()).default(false),
 });
 
 export const bookingFormSchema = z.object({

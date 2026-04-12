@@ -20,7 +20,12 @@ import {
   reverseBookingUsage,
   updateBookingStatus,
 } from "@/lib/domain/bookings";
-import { createRecurringRule, generateRecurringBookings, toggleRecurringRule } from "@/lib/domain/recurring";
+import {
+  createRecurringRule,
+  createWeeklyRecurringSeries,
+  generateRecurringBookings,
+  toggleRecurringRule,
+} from "@/lib/domain/recurring";
 import {
   cancelSession,
   createSession,
@@ -159,7 +164,6 @@ async function createSessionWithInitialBooking(input: {
       sessionId: session.id,
       customerId: input.customerId,
       paymentSourceType: "PACKAGE",
-      deductPackageOnCreate: true,
       userId: input.userId,
     });
 
@@ -797,6 +801,25 @@ export async function saveSessionAction(
       }
 
       try {
+        if (parsed.data.recurringWeekly) {
+          await createWeeklyRecurringSeries({
+            classTypeId: parsed.data.classTypeId,
+            instructorId: parsed.data.instructorId,
+            customerId: parsed.data.customerId,
+            title: parsed.data.title,
+            date: parsed.data.date,
+            startTime: parsed.data.startTime,
+            capacity: parsed.data.capacity,
+            notes: parsed.data.notes,
+            syncToGoogle: parsed.data.syncToGoogle,
+            userId: user.id,
+          });
+
+          revalidateCorePaths();
+          revalidatePath(`/customers/${parsed.data.customerId}`);
+          redirect(getRedirectTo(formData, "/calendar"));
+        }
+
         session = await createSessionWithInitialBooking({
           classTypeId: parsed.data.classTypeId,
           instructorId: parsed.data.instructorId,
@@ -867,6 +890,33 @@ export async function createCalendarSessionAction(
 
     if (parsed.data.capacity > classType.maxCapacity) {
       throw new Error(`Capacity cannot exceed ${classType.maxCapacity} for this class type.`);
+    }
+
+    if (parsed.data.recurringWeekly) {
+      const recurringResult = await createWeeklyRecurringSeries({
+        classTypeId: parsed.data.classTypeId,
+        instructorId: parsed.data.instructorId,
+        customerId: parsed.data.customerId,
+        title: parsed.data.title,
+        date: parsed.data.date,
+        startTime: parsed.data.startTime,
+        capacity: parsed.data.capacity,
+        notes: parsed.data.notes,
+        syncToGoogle: parsed.data.syncToGoogle,
+        userId: user.id,
+      });
+
+      revalidateCorePaths();
+      revalidatePath(`/customers/${parsed.data.customerId}`);
+
+      return {
+        ok: true,
+        message:
+          recurringResult.conflicts.length > 0
+            ? `Created ${recurringResult.createdCount} weekly sessions. ${recurringResult.conflicts.length} skipped.`
+            : `Created ${recurringResult.createdCount} weekly sessions.`,
+        entityId: recurringResult.createdSessionIds[0],
+      };
     }
 
     const session = await createSessionWithInitialBooking({
