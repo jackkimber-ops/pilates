@@ -13,7 +13,7 @@ import { CalendarSessionCreateSheet } from "@/components/calendar/calendar-sessi
 import { CalendarSessionDrawer } from "@/components/calendar/calendar-session-drawer";
 import { buttonStyles } from "@/components/ui/button";
 import { dispatchNavigationStart } from "@/lib/navigation-feedback";
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 
 type CalendarView = "dayGridMonth" | "timeGridWeek" | "timeGridDay";
 
@@ -65,6 +65,7 @@ function renderEventContent(info: EventContentArg) {
   const capacity = Number(info.event.extendedProps.capacity ?? 0);
   const isMonthView = info.view.type === "dayGridMonth";
   const customerSummary = customerPreviewLines.length ? customerPreviewLines.join(" · ") : "No bookings";
+  const instructorLabel = instructorName ? getInitials(instructorName).slice(0, 1) : "";
   const topPill =
     status === "SCHEDULED"
       ? `${bookingCount}/${capacity}`
@@ -90,13 +91,12 @@ function renderEventContent(info: EventContentArg) {
       <div className="calendar-event-topline">
         <span className="calendar-event-time">{info.timeText || "Session"}</span>
         <span className="calendar-event-topline-end">
-          {instructorName ? <span className="calendar-event-instructor-chip">{instructorName}</span> : null}
+          {instructorLabel ? <span className="calendar-event-instructor-chip">{instructorLabel}</span> : null}
           <span className={cn("calendar-event-pill", "calendar-event-pill-neutral")}>{topPill}</span>
         </span>
       </div>
 
       <div className={cn("calendar-event-body", isMonthView ? "calendar-event-body-month" : "calendar-event-body-time")}>
-        <p className="calendar-event-title">{classTypeName}</p>
         <p
           className={cn(
             "calendar-event-customer-summary",
@@ -105,6 +105,7 @@ function renderEventContent(info: EventContentArg) {
         >
           {customerSummary}
         </p>
+        <p className="calendar-event-title">{classTypeName}</p>
       </div>
     </div>
   );
