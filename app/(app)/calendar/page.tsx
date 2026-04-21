@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { addDays } from "date-fns";
-import { CalendarPlus2, Clock3 } from "lucide-react";
+import { Clock3 } from "lucide-react";
 import { CalendarBoard } from "@/components/calendar/calendar-board";
-import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
-import { buttonStyles } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getToday, toDateTimeLabel } from "@/lib/date";
@@ -100,28 +98,18 @@ export default async function CalendarPage() {
 
   return (
     <div className="page-stack">
-      <PageHeader
-        title="Calendar"
-        actions={
-          <Link href="/sessions/new" className={buttonStyles({ size: "lg" })}>
-            <CalendarPlus2 className="size-4" />
-            New session
-          </Link>
-        }
-      />
-
-      <section className="mock-stage">
-        <div className="relative z-10 grid gap-6 xl:grid-cols-[minmax(0,1.08fr)_360px]">
+      <section className="mock-stage calendar-stage">
+        <div className="relative z-10 grid gap-5 2xl:grid-cols-[minmax(0,1fr)_288px]">
           <CalendarBoard />
 
-          <div className="space-y-5 self-start xl:sticky xl:top-28">
-            <Card variant="tint" className="space-y-5">
+          <div className="space-y-4 self-start 2xl:sticky 2xl:top-24">
+            <Card variant="tint" className="space-y-4">
               <div className="section-header">
                 <h2 className="section-title">Today</h2>
                 <Badge tone="plum">Live</Badge>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+              <div className="grid gap-3 sm:grid-cols-3 2xl:grid-cols-1">
                 <div className="stat-shell">
                   <p className="stat-label">Sessions today</p>
                   <p className="metric-number mt-3">{todaySessions.length}</p>

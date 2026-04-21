@@ -8,7 +8,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import timeGridPlugin from "@fullcalendar/timegrid";
-import { ArrowRight, CalendarDays } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { CalendarSessionCreateSheet } from "@/components/calendar/calendar-session-create-sheet";
 import { CalendarSessionDrawer } from "@/components/calendar/calendar-session-drawer";
 import { buttonStyles } from "@/components/ui/button";
@@ -64,7 +64,7 @@ function renderEventContent(info: EventContentArg) {
   const bookingCount = Number(info.event.extendedProps.bookingCount ?? 0);
   const capacity = Number(info.event.extendedProps.capacity ?? 0);
   const isMonthView = info.view.type === "dayGridMonth";
-  const tone = "neutral";
+  const customerSummary = customerPreviewLines.length ? customerPreviewLines.join(" · ") : "No bookings";
   const topPill =
     status === "SCHEDULED"
       ? `${bookingCount}/${capacity}`
@@ -89,40 +89,22 @@ function renderEventContent(info: EventContentArg) {
     >
       <div className="calendar-event-topline">
         <span className="calendar-event-time">{info.timeText || "Session"}</span>
-        <span className={cn("calendar-event-pill", `calendar-event-pill-${tone}`)}>
-          {topPill}
+        <span className="calendar-event-topline-end">
+          {instructorName ? <span className="calendar-event-instructor-chip">{instructorName}</span> : null}
+          <span className={cn("calendar-event-pill", "calendar-event-pill-neutral")}>{topPill}</span>
         </span>
       </div>
 
-      <div className="space-y-1.5">
+      <div className={cn("calendar-event-body", isMonthView ? "calendar-event-body-month" : "calendar-event-body-time")}>
         <p className="calendar-event-title">{classTypeName}</p>
-        <div className="calendar-event-attendees">
-          {customerPreviewLines.map((line, index) => (
-            <p
-              key={`${info.event.id}-customer-${index}`}
-              className={cn(
-                "calendar-event-customer",
-                line === "No bookings" ? "calendar-event-customer-empty" : undefined,
-              )}
-            >
-              {line}
-            </p>
-          ))}
-        </div>
-      </div>
-
-      <div className="calendar-event-meta">
-        <span className="calendar-event-instructor">
-          <span className="calendar-event-instructor-dot" aria-hidden="true" />
-          <span className="truncate">{instructorName}</span>
-        </span>
-        <span className="calendar-event-meta-copy">
-          {status === "SCHEDULED"
-            ? isMonthView
-              ? `${bookingCount}/${capacity}`
-              : `${bookingCount}/${capacity} booked`
-            : (STATUS_LABELS[status] ?? status.replaceAll("_", " "))}
-        </span>
+        <p
+          className={cn(
+            "calendar-event-customer-summary",
+            customerSummary === "No bookings" ? "calendar-event-customer-empty" : undefined,
+          )}
+        >
+          {customerSummary}
+        </p>
       </div>
     </div>
   );
@@ -184,17 +166,8 @@ export function CalendarBoard() {
   }, []);
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div className="space-y-2.5">
-          <p className="section-kicker">Schedule</p>
-          <div className="chip-row">
-            <span className="top-app-bar-chip">Tap to create</span>
-            <span className="top-app-bar-chip">Drag to move</span>
-            <span className="top-app-bar-chip">No overlaps</span>
-          </div>
-        </div>
-
+    <div className="space-y-3.5">
+      <div className="flex items-center justify-end">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="segmented-control max-w-[320px]">
             {VIEW_OPTIONS.map((option) => (
@@ -208,14 +181,6 @@ export function CalendarBoard() {
             </button>
             ))}
           </div>
-          <button
-            type="button"
-            className={buttonStyles({ variant: "secondary", size: "sm" })}
-            onClick={() => calendarRef.current?.getApi().today()}
-          >
-            <CalendarDays className="size-4" />
-            Today
-          </button>
         </div>
       </div>
 

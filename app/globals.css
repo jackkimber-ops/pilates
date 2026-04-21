@@ -329,7 +329,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .page-shell {
-  @apply mx-auto w-full max-w-[1440px] px-4 pb-36 pt-4 md:px-6 md:pt-5 lg:px-8 lg:pb-10;
+  @apply mx-auto w-full max-w-[1600px] px-4 pb-36 pt-4 md:px-5 md:pt-5 lg:px-6 lg:pb-10;
 }
 
 .page-stack {
@@ -344,7 +344,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .app-shell-grid {
-  @apply lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8;
+  @apply lg:grid lg:grid-cols-[248px_minmax(0,1fr)] lg:gap-6;
 }
 
 .top-app-bar-chip {
@@ -607,7 +607,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.76),
     0 18px 34px -34px rgba(74, 56, 51, 0.1);
-  @apply flex items-center gap-3 rounded-[24px] px-3.5 py-3 text-[14px] font-semibold text-ink/82 transition-all duration-200;
+  @apply flex items-center gap-3 rounded-[22px] px-3 py-2.5 text-[13px] font-semibold text-ink/82 transition-all duration-200;
 }
 
 .sidebar-nav-link:hover {
@@ -641,7 +641,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 .sidebar-nav-icon {
   background: rgba(255, 255, 255, 0.56);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
-  @apply flex size-9 items-center justify-center rounded-[18px] text-ink/72 transition-all duration-200;
+  @apply flex size-8 items-center justify-center rounded-[16px] text-ink/72 transition-all duration-200;
 }
 
 .sidebar-nav-link:hover .sidebar-nav-icon {
@@ -695,6 +695,10 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
   @apply relative overflow-hidden rounded-[32px] p-3.5 md:p-5;
 }
 
+.calendar-stage {
+  @apply p-3 md:p-4;
+}
+
 .mock-stage::before {
   content: "";
   position: absolute;
@@ -714,7 +718,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
     linear-gradient(180deg, rgba(255, 251, 248, 0.96), rgba(255, 247, 243, 0.84)),
     rgba(255, 250, 247, 0.82);
   box-shadow: var(--shadow-lift);
-  @apply rounded-[30px] p-3.5 md:p-5;
+  @apply rounded-[28px] p-3 md:p-4;
 }
 
 .calendar-board-footer {
@@ -738,7 +742,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
   position: relative;
   overflow: hidden;
   min-height: 100%;
-  border-radius: 16px;
+  border-radius: 14px;
   background: linear-gradient(180deg, var(--event-accent-tint, rgba(255, 252, 249, 0.96)), rgba(255, 252, 249, 0.96));
   color: var(--color-ink);
   box-shadow:
@@ -749,7 +753,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 .calendar-event-shell::before {
   content: "";
   position: absolute;
-  inset: 7px auto 7px 7px;
+  inset: 5px auto 5px 5px;
   width: 3px;
   border-radius: 999px;
   background: var(--event-accent, var(--color-accent));
@@ -757,13 +761,13 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .calendar-event-shell-time {
-  @apply px-3.5 py-3;
-  padding-left: 0.95rem;
+  @apply px-2.5 py-2;
+  padding-left: 0.78rem;
 }
 
 .calendar-event-shell-month {
-  @apply px-3 py-2.5;
-  padding-left: 0.9rem;
+  @apply px-2.5 py-2;
+  padding-left: 0.78rem;
 }
 
 .calendar-event-shell-cancelled {
@@ -775,49 +779,46 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
   @apply flex items-start justify-between gap-2;
 }
 
+.calendar-event-topline-end {
+  @apply flex min-w-0 items-center gap-1.5;
+}
+
 .calendar-event-time {
-  @apply truncate text-[0.62rem] font-semibold uppercase tracking-[0.17em] text-muted;
+  @apply truncate text-[0.56rem] font-semibold uppercase tracking-[0.15em] text-muted;
+}
+
+.calendar-event-instructor-chip {
+  @apply inline-flex max-w-[5.5rem] truncate rounded-full px-2 py-0.5 text-[0.55rem] font-semibold uppercase tracking-[0.12em] text-muted;
+  background: color-mix(in srgb, var(--event-accent-soft, rgba(255, 251, 248, 0.92)) 88%, white);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.calendar-event-body {
+  @apply space-y-1;
+}
+
+.calendar-event-body-time {
+  @apply mt-1;
+}
+
+.calendar-event-body-month {
+  @apply mt-1;
 }
 
 .calendar-event-title {
-  @apply truncate text-[0.84rem] font-semibold leading-5 text-ink;
+  @apply truncate text-[0.78rem] font-semibold leading-[1.1] text-ink;
 }
 
-.calendar-event-attendees {
-  @apply space-y-0.5;
-}
-
-.calendar-event-customer {
-  @apply truncate text-[0.76rem] font-medium leading-[1.25] text-ink;
+.calendar-event-customer-summary {
+  @apply truncate text-[0.68rem] font-medium leading-[1.15] text-ink;
 }
 
 .calendar-event-customer-empty {
   @apply text-muted;
 }
 
-.calendar-event-meta {
-  @apply mt-2.5 flex items-center justify-between gap-2 text-[0.7rem] font-medium leading-4 text-muted;
-}
-
-.calendar-event-instructor {
-  @apply inline-flex min-w-0 items-center gap-1.5 text-[0.71rem] text-muted;
-}
-
-.calendar-event-instructor-dot {
-  flex: none;
-  width: 0.42rem;
-  height: 0.42rem;
-  border-radius: 999px;
-  background: var(--event-accent, var(--color-accent));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--event-accent, var(--color-accent)) 14%, white);
-}
-
-.calendar-event-meta-copy {
-  @apply truncate text-right;
-}
-
 .calendar-event-pill {
-  @apply inline-flex h-6 items-center rounded-full px-2.5 text-[0.58rem] font-semibold uppercase tracking-[0.14em];
+  @apply inline-flex h-5 items-center rounded-full px-2 text-[0.54rem] font-semibold uppercase tracking-[0.12em];
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
 }
 
@@ -854,7 +855,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .fc .fc-toolbar {
-  @apply mb-6 flex-wrap gap-3;
+  @apply mb-3 flex-wrap gap-2;
 }
 
 .fc .fc-toolbar-chunk {
@@ -862,11 +863,11 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .fc .fc-toolbar-title {
-  @apply font-display text-[1.85rem] leading-none tracking-[-0.05em] text-ink md:text-[2.15rem];
+  @apply font-display text-[1.45rem] leading-none tracking-[-0.05em] text-ink md:text-[1.8rem];
 }
 
 .fc .fc-button {
-  @apply h-10 rounded-full px-4 text-sm font-semibold shadow-none ring-0;
+  @apply h-8 rounded-full px-3 text-[0.82rem] font-semibold shadow-none ring-0;
 }
 
 .fc .fc-button-primary {
@@ -901,16 +902,20 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .fc .fc-col-header-cell {
-  @apply pb-3;
+  @apply pb-1.5;
+}
+
+.fc .fc-timegrid-axis {
+  width: 4.1rem;
 }
 
 .fc .fc-timegrid-axis-cushion {
-  @apply px-2 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-muted;
+  @apply px-1.5 py-1 text-[0.64rem] font-semibold uppercase tracking-[0.15em] text-muted;
 }
 
 .fc .fc-daygrid-day-number,
 .fc .fc-timegrid-slot-label-cushion {
-  @apply px-2 py-1 text-[0.82rem] text-muted;
+  @apply px-1.5 py-0.5 text-[0.76rem] text-muted;
 }
 
 .fc .fc-daygrid-day-top {
@@ -922,7 +927,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .fc .fc-timegrid-slot {
-  height: 4.7rem;
+  height: 1.52rem;
 }
 
 .fc .fc-day-today {
@@ -931,9 +936,9 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 
 .fc .fc-event {
   border: 0;
-  border-radius: 18px;
+  border-radius: 14px;
   box-shadow: none;
-  padding: 0.2rem;
+  padding: 0.12rem;
 }
 
 .fc .fc-event-main {
@@ -1029,17 +1034,16 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
   }
 
   .calendar-event-shell-time {
-    @apply px-3 py-2.5;
+    @apply px-2.5 py-2;
   }
 
   .calendar-event-title {
-    font-size: 0.78rem;
+    font-size: 0.74rem;
   }
 
-  .calendar-event-customer,
-  .calendar-event-meta,
-  .calendar-event-instructor {
-    font-size: 0.67rem;
+  .calendar-event-customer-summary,
+  .calendar-event-instructor-chip {
+    font-size: 0.64rem;
   }
 
   .fc .fc-daygrid-day-frame {
@@ -1047,7 +1051,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
   }
 
   .fc .fc-timegrid-slot {
-    height: 4.2rem;
+    height: 2rem;
   }
 }
 
