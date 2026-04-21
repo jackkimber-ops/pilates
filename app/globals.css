@@ -763,12 +763,12 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .calendar-event-shell-time {
-  @apply px-2.5 py-1.5;
+  @apply px-2.5 py-1;
   padding-left: 0.78rem;
 }
 
 .calendar-event-shell-month {
-  @apply px-2.5 py-1.5;
+  @apply px-2.5 py-1;
   padding-left: 0.78rem;
 }
 
@@ -796,7 +796,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .calendar-event-body {
-  @apply mt-0.5 space-y-0.5;
+  @apply mt-0.5 space-y-0;
 }
 
 .calendar-event-body-time {
@@ -812,7 +812,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .calendar-event-customer-summary {
-  @apply truncate text-[0.77rem] font-semibold leading-[1.08] text-ink;
+  @apply truncate text-[0.8rem] font-semibold leading-[1.02] text-ink;
 }
 
 .calendar-event-customer-empty {
@@ -929,7 +929,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .fc .fc-timegrid-slot {
-  height: 1.68rem;
+  height: 1.8rem;
 }
 
 .fc .fc-day-today {
@@ -940,7 +940,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
   border: 0;
   border-radius: 14px;
   box-shadow: none;
-  padding: 0.12rem;
+  padding: 0.04rem;
 }
 
 .fc .fc-event-main {

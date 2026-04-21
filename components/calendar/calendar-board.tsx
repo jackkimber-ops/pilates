@@ -54,6 +54,23 @@ function renderDayHeader(arg: DayHeaderContentArg) {
   );
 }
 
+function formatCompactEventTime(value: Date | null) {
+  if (!value) {
+    return "Session";
+  }
+
+  const hours = value.getHours();
+  const minutes = value.getMinutes();
+  const period = hours >= 12 ? "pm" : "am";
+  const normalizedHour = hours % 12 || 12;
+
+  if (minutes === 0) {
+    return `${normalizedHour}${period}`;
+  }
+
+  return `${normalizedHour}:${String(minutes).padStart(2, "0")}${period}`;
+}
+
 function renderEventContent(info: EventContentArg) {
   const status = String(info.event.extendedProps.status ?? "SCHEDULED");
   const classTypeName = String(info.event.extendedProps.classTypeName ?? info.event.title);
@@ -66,6 +83,7 @@ function renderEventContent(info: EventContentArg) {
   const isMonthView = info.view.type === "dayGridMonth";
   const customerSummary = customerPreviewLines.length ? customerPreviewLines.join(" · ") : "No bookings";
   const instructorLabel = instructorName ? getInitials(instructorName).slice(0, 1) : "";
+  const compactTime = formatCompactEventTime(info.event.start);
   const topPill =
     status === "SCHEDULED"
       ? `${bookingCount}/${capacity}`
@@ -89,7 +107,7 @@ function renderEventContent(info: EventContentArg) {
       }
     >
       <div className="calendar-event-topline">
-        <span className="calendar-event-time">{info.timeText || "Session"}</span>
+        <span className="calendar-event-time">{compactTime}</span>
         <span className="calendar-event-topline-end">
           {instructorLabel ? <span className="calendar-event-instructor-chip">{instructorLabel}</span> : null}
           <span className={cn("calendar-event-pill", "calendar-event-pill-neutral")}>{topPill}</span>
