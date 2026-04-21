@@ -83,6 +83,20 @@ export default async function DashboardPage() {
               category: true,
             },
           },
+          bookings: {
+            where: {
+              status: {
+                not: "CANCELLED",
+              },
+            },
+            select: {
+              customer: {
+                select: {
+                  fullName: true,
+                },
+              },
+            },
+          },
           _count: {
             select: {
               bookings: {
@@ -229,6 +243,21 @@ export default async function DashboardPage() {
   const totalTodayBookings = todaysSessions.reduce((sum, session) => sum + session._count.bookings, 0);
   const nextSession = upcomingSessions[0] ?? null;
   const followUpCount = lowBalancePackages.length + expiredPackages.length;
+  const getSessionClientLabel = (
+    session: (typeof upcomingSessions)[number],
+  ) => {
+    const names = session.bookings.map((booking) => booking.customer.fullName);
+
+    if (!names.length) {
+      return "No clients";
+    }
+
+    if (names.length <= 2) {
+      return names.join(", ");
+    }
+
+    return `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
+  };
 
   return (
     <div className="page-stack">
@@ -318,7 +347,7 @@ export default async function DashboardPage() {
                     <p className="text-sm leading-6 text-muted">
                       {compactList([
                           toDateTimeLabel(nextSession.startsAt),
-                          nextSession.instructor.fullName,
+                          getSessionClientLabel(nextSession),
                           `${nextSession._count.bookings}/${nextSession.capacity} booked`,
                         ])}
                       </p>
@@ -341,7 +370,7 @@ export default async function DashboardPage() {
                       <p className="mt-1 text-sm leading-6 text-muted">
                         {compactList([
                           toDateTimeLabel(session.startsAt),
-                          session.instructor.fullName,
+                          getSessionClientLabel(session),
                           `${session._count.bookings}/${session.capacity} booked`,
                         ])}
                       </p>
