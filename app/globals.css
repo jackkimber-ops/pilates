@@ -742,6 +742,8 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
   position: relative;
   overflow: hidden;
   min-height: 100%;
+  display: flex;
+  flex-direction: column;
   border-radius: 14px;
   background: linear-gradient(180deg, var(--event-accent-tint, rgba(255, 252, 249, 0.96)), rgba(255, 252, 249, 0.96));
   color: var(--color-ink);
@@ -761,12 +763,12 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .calendar-event-shell-time {
-  @apply px-2.5 py-2;
+  @apply px-2.5 py-1.5;
   padding-left: 0.78rem;
 }
 
 .calendar-event-shell-month {
-  @apply px-2.5 py-2;
+  @apply px-2.5 py-1.5;
   padding-left: 0.78rem;
 }
 
@@ -776,15 +778,15 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .calendar-event-topline {
-  @apply flex items-start justify-between gap-2;
+  @apply flex items-start justify-between gap-1.5;
 }
 
 .calendar-event-topline-end {
-  @apply flex min-w-0 items-center gap-1.5;
+  @apply flex min-w-0 items-center gap-1;
 }
 
 .calendar-event-time {
-  @apply truncate text-[0.56rem] font-semibold uppercase tracking-[0.15em] text-muted;
+  @apply truncate text-[0.54rem] font-semibold uppercase tracking-[0.13em] text-muted;
 }
 
 .calendar-event-instructor-chip {
@@ -794,23 +796,23 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .calendar-event-body {
-  @apply space-y-1;
+  @apply mt-0.5 space-y-0.5;
 }
 
 .calendar-event-body-time {
-  @apply mt-1;
+  @apply mt-0.5;
 }
 
 .calendar-event-body-month {
-  @apply mt-1;
+  @apply mt-0.5;
 }
 
 .calendar-event-title {
-  @apply truncate text-[0.66rem] font-medium leading-[1.05] text-muted;
+  @apply truncate text-[0.68rem] font-medium leading-[1.02] text-muted;
 }
 
 .calendar-event-customer-summary {
-  @apply truncate text-[0.74rem] font-semibold leading-[1.12] text-ink;
+  @apply truncate text-[0.77rem] font-semibold leading-[1.08] text-ink;
 }
 
 .calendar-event-customer-empty {
@@ -818,7 +820,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .calendar-event-pill {
-  @apply inline-flex h-5 items-center rounded-full px-2 text-[0.54rem] font-semibold uppercase tracking-[0.12em];
+  @apply inline-flex h-4.5 items-center rounded-full px-1.5 text-[0.5rem] font-semibold uppercase tracking-[0.1em];
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
 }
 
@@ -927,7 +929,7 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .fc .fc-timegrid-slot {
-  height: 1.52rem;
+  height: 1.68rem;
 }
 
 .fc .fc-day-today {
