@@ -6,6 +6,7 @@ import { formatSessionWindow } from "@/lib/date";
 import { cancelSession } from "@/lib/domain/sessions";
 import { isGoogleCalendarConfigured } from "@/lib/google-calendar";
 import { prisma } from "@/lib/prisma";
+import { getEffectiveSessionStatus } from "@/lib/session-status";
 import { compactList } from "@/lib/utils";
 
 type SessionAlertTone = "warning" | "info";
@@ -227,6 +228,7 @@ export async function GET(
     return NextResponse.json({ error: "Session not found." }, { status: 404 });
   }
 
+  const effectiveStatus = getEffectiveSessionStatus(session);
   const activeBookingCount = session.bookings.filter((booking) => booking.status !== "CANCELLED").length;
   const attendedBookingCount = session.bookings.filter((booking) => booking.status === "ATTENDED").length;
   const packageBackedCount = session.bookings.filter(
@@ -249,7 +251,7 @@ export async function GET(
 
   const alerts: Array<{ title: string; detail: string; tone: SessionAlertTone }> = [];
 
-  if (session.status === "CANCELLED") {
+  if (effectiveStatus === "CANCELLED") {
     alerts.push({
       title: "Cancelled",
       detail: "New bookings are disabled.",
@@ -284,7 +286,7 @@ export async function GET(
   return NextResponse.json({
     id: session.id,
     title: session.title,
-    status: session.status,
+    status: effectiveStatus,
     startsAt: session.startsAt.toISOString(),
     endsAt: session.endsAt.toISOString(),
     capacity: session.capacity,

@@ -1,5 +1,11 @@
 import Link from "next/link";
 import { ArrowRight, CalendarDays, CircleDollarSign, Clock3, Plus, Settings2, Sparkles, Users2 } from "lucide-react";
+import {
+  DashboardLiveSessionsProvider,
+  DashboardNextSessionCard,
+  DashboardSessionStats,
+  DashboardTodaySessionsCard,
+} from "@/components/dashboard/dashboard-live-sessions";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { buttonStyles } from "@/components/ui/button";
@@ -7,113 +13,17 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getCustomerBalanceLabel, getCustomerBalanceSourceLabel } from "@/lib/balances";
 import { LOW_CREDIT_THRESHOLD } from "@/lib/constants";
-import { getNow, getToday, getTodayRangeInAppTimezone, toDateTimeLabel, toRelativeDayLabel } from "@/lib/date";
+import { getDashboardLiveSessions } from "@/lib/dashboard-live-sessions";
+import { getToday, toRelativeDayLabel } from "@/lib/date";
 import { prisma } from "@/lib/prisma";
 import { compactList, formatCurrency } from "@/lib/utils";
 
 export default async function DashboardPage() {
-  const now = getNow();
   const today = getToday();
-  const { end: tomorrow } = getTodayRangeInAppTimezone(now);
 
-  const [todaysSessions, upcomingSessions, lowBalancePackages, expiredPackages, unusedSingles] =
+  const [liveSessions, lowBalancePackages, expiredPackages, unusedSingles] =
     await Promise.all([
-      prisma.session.findMany({
-        where: {
-          status: "SCHEDULED",
-          startsAt: {
-            gte: now,
-            lt: tomorrow,
-          },
-        },
-        select: {
-          id: true,
-          title: true,
-          status: true,
-          startsAt: true,
-          startTime: true,
-          capacity: true,
-          instructor: {
-            select: {
-              fullName: true,
-            },
-          },
-          classType: {
-            select: {
-              name: true,
-              category: true,
-            },
-          },
-          _count: {
-            select: {
-              bookings: {
-                where: {
-                  status: {
-                    not: "CANCELLED",
-                  },
-                },
-              },
-            },
-          },
-        },
-        orderBy: {
-          startsAt: "asc",
-        },
-      }),
-      prisma.session.findMany({
-        where: {
-          status: "SCHEDULED",
-          startsAt: {
-            gte: now,
-          },
-        },
-        select: {
-          id: true,
-          title: true,
-          status: true,
-          startsAt: true,
-          capacity: true,
-          instructor: {
-            select: {
-              fullName: true,
-            },
-          },
-          classType: {
-            select: {
-              category: true,
-            },
-          },
-          bookings: {
-            where: {
-              status: {
-                not: "CANCELLED",
-              },
-            },
-            select: {
-              customer: {
-                select: {
-                  fullName: true,
-                },
-              },
-            },
-          },
-          _count: {
-            select: {
-              bookings: {
-                where: {
-                  status: {
-                    not: "CANCELLED",
-                  },
-                },
-              },
-            },
-          },
-        },
-        orderBy: {
-          startsAt: "asc",
-        },
-        take: 6,
-      }),
+      getDashboardLiveSessions(),
       prisma.customerPackage.findMany({
         where: {
           active: true,
@@ -240,27 +150,11 @@ export default async function DashboardPage() {
     },
   ];
 
-  const totalTodayBookings = todaysSessions.reduce((sum, session) => sum + session._count.bookings, 0);
-  const nextSession = upcomingSessions[0] ?? null;
   const followUpCount = lowBalancePackages.length + expiredPackages.length;
-  const getSessionClientLabel = (
-    session: (typeof upcomingSessions)[number],
-  ) => {
-    const names = session.bookings.map((booking) => booking.customer.fullName);
-
-    if (!names.length) {
-      return "No clients";
-    }
-
-    if (names.length <= 2) {
-      return names.join(", ");
-    }
-
-    return `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
-  };
 
   return (
-    <div className="page-stack">
+    <DashboardLiveSessionsProvider initialData={liveSessions}>
+      <div className="page-stack">
       <PageHeader
         title="Dashboard"
         actions={
@@ -277,20 +171,7 @@ export default async function DashboardPage() {
             <h2 className="section-title max-w-xl">Overview</h2>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="stat-shell">
-              <p className="stat-label">Sessions today</p>
-              <p className="metric-number mt-3">{todaysSessions.length}</p>
-            </div>
-            <div className="stat-shell">
-              <p className="stat-label">Bookings today</p>
-              <p className="metric-number mt-3">{totalTodayBookings}</p>
-            </div>
-            <div className="stat-shell">
-              <p className="stat-label">Follow-up items</p>
-              <p className="metric-number mt-3">{followUpCount}</p>
-            </div>
-          </div>
+          <DashboardSessionStats followUpCount={followUpCount} />
 
           <div className="soft-divider" />
 
@@ -325,68 +206,7 @@ export default async function DashboardPage() {
         </Card>
 
         <div className="space-y-5">
-          <Card variant="soft" className="space-y-5">
-              <div className="section-header">
-                <h2 className="section-title">Next session</h2>
-              <Badge tone="outline">Live</Badge>
-            </div>
-
-            {nextSession ? (
-              <Link href={`/sessions/${nextSession.id}`} className="list-row block">
-                <div className="space-y-3">
-                  <div className="chip-row">
-                    <Badge tone={nextSession.classType.category === "GROUP" ? "plum" : "warm"}>
-                      {nextSession.classType.category}
-                    </Badge>
-                    <Badge tone="outline">{nextSession.status}</Badge>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="font-display text-[1.7rem] leading-none tracking-[-0.04em] text-ink">
-                      {nextSession.title}
-                    </p>
-                    <p className="text-sm leading-6 text-muted">
-                      {compactList([
-                          toDateTimeLabel(nextSession.startsAt),
-                          getSessionClientLabel(nextSession),
-                          `${nextSession._count.bookings}/${nextSession.capacity} booked`,
-                        ])}
-                      </p>
-                  </div>
-                </div>
-              </Link>
-            ) : (
-              <EmptyState
-                title="No upcoming sessions"
-                description="Create a session."
-              />
-            )}
-
-            <div className="space-y-3">
-              {upcomingSessions.slice(1, 4).map((session) => (
-                <Link key={session.id} href={`/sessions/${session.id}`} className="list-row-quiet block">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-ink">{session.title}</p>
-                      <p className="mt-1 text-sm leading-6 text-muted">
-                        {compactList([
-                          toDateTimeLabel(session.startsAt),
-                          getSessionClientLabel(session),
-                          `${session._count.bookings}/${session.capacity} booked`,
-                        ])}
-                      </p>
-                    </div>
-                    <Badge tone={session.classType.category === "GROUP" ? "plum" : "warm"}>
-                      {session.classType.category}
-                    </Badge>
-                  </div>
-                </Link>
-              ))}
-            </div>
-
-            <Link href="/calendar" className={buttonStyles({ variant: "secondary", size: "sm" })}>
-              Calendar
-            </Link>
-          </Card>
+          <DashboardNextSessionCard />
 
           <Card variant="soft" className="space-y-4">
             <div className="section-header">
@@ -417,61 +237,7 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <Card className="space-y-6">
-        <div className="section-header">
-          <h2 className="section-title">Today</h2>
-        </div>
-
-        <div className="space-y-3">
-          {todaysSessions.length ? (
-            todaysSessions.map((session) => (
-              <Link key={session.id} href={`/sessions/${session.id}`} className="list-row block">
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div className="space-y-3">
-                    <div className="chip-row">
-                      <Badge tone={session.classType.category === "GROUP" ? "plum" : "warm"}>
-                        {session.classType.category}
-                      </Badge>
-                      <Badge tone="outline">{session.status}</Badge>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="font-display text-[1.8rem] leading-none tracking-[-0.04em] text-ink">
-                        {session.title}
-                      </p>
-                      <p className="text-sm leading-6 text-muted">
-                        {compactList([
-                          session.classType.name,
-                          session.instructor.fullName,
-                          `${session._count.bookings}/${session.capacity} booked`,
-                        ])}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="md:text-right">
-                    <p className="text-sm font-semibold uppercase tracking-[0.16em] text-muted">
-                      {toRelativeDayLabel(session.startsAt)}
-                    </p>
-                    <p className="mt-2 font-display text-[1.55rem] leading-none tracking-[-0.04em] text-ink">
-                      {session.startTime}
-                    </p>
-                  </div>
-                </div>
-              </Link>
-            ))
-          ) : (
-            <EmptyState
-              title="No sessions today"
-              description="Create a session."
-              action={
-                <Link href="/sessions/new" className={buttonStyles({ variant: "tonal", size: "sm" })}>
-                  Create session
-                </Link>
-              }
-            />
-          )}
-        </div>
-      </Card>
+      <DashboardTodaySessionsCard />
 
       <section className="grid gap-5 xl:grid-cols-3">
         <Card className="space-y-4">
@@ -571,6 +337,7 @@ export default async function DashboardPage() {
           </div>
         </Card>
       </section>
-    </div>
+      </div>
+    </DashboardLiveSessionsProvider>
   );
 }

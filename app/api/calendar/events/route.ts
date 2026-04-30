@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getInstructorCalendarTheme } from "@/lib/instructor-theme";
 import { prisma } from "@/lib/prisma";
+import { getEffectiveSessionStatus } from "@/lib/session-status";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -139,8 +140,10 @@ export async function GET(request: Request) {
     },
   });
 
+  const now = new Date();
   const events = sessions.map((session) => {
     const instructorTheme = getInstructorCalendarTheme(session.instructor.fullName);
+    const effectiveStatus = getEffectiveSessionStatus(session, now);
     const activeBookingCount = session.bookings.length;
     const attendeeNames = session.bookings.map((booking) => booking.customer.fullName);
     const customerPreview = buildCustomerPreview(attendeeNames);
@@ -150,7 +153,7 @@ export async function GET(request: Request) {
       title: session.classType.name,
       start: session.startsAt.toISOString(),
       end: session.endsAt.toISOString(),
-      editable: session.status === "SCHEDULED",
+      editable: effectiveStatus === "SCHEDULED",
       backgroundColor: mixHex(instructorTheme.soft, "#fffaf6", 0.36),
       borderColor: mixHex(instructorTheme.accent, "#ffffff", 0.82),
       textColor: "#302726",
@@ -162,7 +165,7 @@ export async function GET(request: Request) {
         bookingLabel: `${activeBookingCount}/${session.capacity} booked`,
         bookingCount: activeBookingCount,
         capacity: session.capacity,
-        status: session.status,
+        status: effectiveStatus,
         category: session.classType.category,
         classTypeName: session.classType.name,
         customerPreviewLines: customerPreview.lines,

@@ -95,6 +95,7 @@ function renderEventContent(info: EventContentArg) {
         "calendar-event-shell",
         isMonthView ? "calendar-event-shell-month" : "calendar-event-shell-time",
         status === "CANCELLED" ? "calendar-event-shell-cancelled" : undefined,
+        status === "COMPLETED" ? "calendar-event-shell-completed" : undefined,
       )}
       style={
         {

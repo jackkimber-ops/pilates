@@ -777,6 +777,11 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
   color: var(--color-muted);
 }
 
+.calendar-event-shell-completed {
+  opacity: 0.72;
+  filter: saturate(0.82);
+}
+
 .calendar-event-topline {
   @apply flex items-start justify-between gap-1.5;
 }

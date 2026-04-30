@@ -25,6 +25,7 @@ import { getCustomerBalanceLabel } from "@/lib/balances";
 import { formatSessionWindow, toDateInputValue } from "@/lib/date";
 import { isGoogleCalendarConfigured } from "@/lib/google-calendar";
 import { prisma } from "@/lib/prisma";
+import { getEffectiveSessionStatus } from "@/lib/session-status";
 import { compactList, formatCurrency } from "@/lib/utils";
 
 function getSessionStatusTone(status: string) {
@@ -393,6 +394,7 @@ export default async function SessionDetailPage({
   const consumedBookingCount = session.bookings.filter(
     (booking) => booking.creditDeducted || booking.singleUseConsumed || booking.trialUseConsumed,
   ).length;
+  const effectiveSessionStatus = getEffectiveSessionStatus(session);
   const restorableCancelledBookingCount = session.bookings.filter(
     (booking) =>
       booking.status === "CANCELLED" &&
@@ -538,7 +540,7 @@ export default async function SessionDetailPage({
               <div className="grid gap-6 px-6 py-6 md:px-8 md:py-8 xl:grid-cols-[1.08fr_0.92fr]">
                 <div className="space-y-4">
                   <div className="chip-row">
-                    <Badge tone={getSessionStatusTone(session.status)}>{session.status}</Badge>
+                    <Badge tone={getSessionStatusTone(effectiveSessionStatus)}>{effectiveSessionStatus}</Badge>
                     <Badge tone={session.classType.category === "GROUP" ? "plum" : "warm"}>
                       {session.classType.category}
                     </Badge>
@@ -687,7 +689,7 @@ export default async function SessionDetailPage({
                       <Badge tone={session.classType.category === "GROUP" ? "plum" : "warm"}>
                         {session.classType.category}
                       </Badge>
-                      <Badge tone={getSessionStatusTone(session.status)}>{session.status}</Badge>
+                      <Badge tone={getSessionStatusTone(effectiveSessionStatus)}>{effectiveSessionStatus}</Badge>
                       {session.recurringBookingRuleId ? <Badge tone="outline">Recurring</Badge> : null}
                     </div>
 
