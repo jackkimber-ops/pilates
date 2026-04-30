@@ -209,6 +209,14 @@ export async function updateSession(input: {
     throw new Error("Session not found.");
   }
 
+  const activeBookingCount = existingSession.bookings.filter(
+    (booking) => booking.status !== BookingStatus.CANCELLED,
+  ).length;
+
+  if (input.capacity < activeBookingCount) {
+    throw new Error(`Capacity cannot be lower than ${activeBookingCount} current bookings.`);
+  }
+
   const classType = await prisma.classType.findUnique({
     where: { id: input.classTypeId },
   });

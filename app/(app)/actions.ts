@@ -16,6 +16,7 @@ import { calculateExpiryDate, combineDateAndTime } from "@/lib/date";
 import { recordCustomerPackageTransaction, recordCustomerTrialItemTransaction } from "@/lib/entitlement-ledger";
 import {
   adjustPackageCredits,
+  cancelBooking,
   createBooking,
   reverseBookingUsage,
   updateBookingStatus,
@@ -55,6 +56,29 @@ import {
 
 function formDataToObject(formData: FormData) {
   return Object.fromEntries(formData.entries());
+}
+
+function sessionFormDataToObject(formData: FormData) {
+  const object = formDataToObject(formData);
+  const customerIds = formData
+    .getAll("customerIds")
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+  const legacyCustomerId = formData.get("customerId");
+  const normalizedCustomerIds = customerIds.length
+    ? customerIds
+    : typeof legacyCustomerId === "string" && legacyCustomerId.trim().length > 0
+      ? [legacyCustomerId]
+      : [];
+
+  return {
+    ...object,
+    customerIds: normalizedCustomerIds,
+    customerId: normalizedCustomerIds[0] ?? object.customerId,
+  };
+}
+
+function uniqueIds(ids: string[]) {
+  return Array.from(new Set(ids.filter((id) => id.trim().length > 0)));
 }
 
 function actionError(error: unknown): FormState {
@@ -107,10 +131,10 @@ function revalidateCorePaths() {
   ].forEach((path) => revalidatePath(path));
 }
 
-async function createSessionWithInitialBooking(input: {
+async function createSessionWithInitialBookings(input: {
   classTypeId: string;
   instructorId: string;
-  customerId: string;
+  customerIds: string[];
   title: string;
   date: string;
   startTime: string;
@@ -119,9 +143,21 @@ async function createSessionWithInitialBooking(input: {
   syncToGoogle: boolean;
   userId: string;
 }) {
-  const availableBalance = await prisma.customerPackage.findFirst({
+  const customerIds = uniqueIds(input.customerIds);
+
+  if (!customerIds.length) {
+    throw new Error("Select a customer.");
+  }
+
+  if (customerIds.length > input.capacity) {
+    throw new Error("Customer count exceeds session capacity.");
+  }
+
+  const availableBalances = await prisma.customerPackage.findMany({
     where: {
-      customerId: input.customerId,
+      customerId: {
+        in: customerIds,
+      },
       classTypeId: input.classTypeId,
       active: true,
       remainingCredits: {
@@ -139,11 +175,12 @@ async function createSessionWithInitialBooking(input: {
       ],
     },
     select: {
-      id: true,
+      customerId: true,
     },
   });
 
-  if (!availableBalance) {
+  const customersWithBalance = new Set(availableBalances.map((balance) => balance.customerId));
+  if (customerIds.some((customerId) => !customersWithBalance.has(customerId))) {
     throw new Error("Matching balance required.");
   }
 
@@ -160,12 +197,14 @@ async function createSessionWithInitialBooking(input: {
   });
 
   try {
-    await createBooking({
-      sessionId: session.id,
-      customerId: input.customerId,
-      paymentSourceType: "PACKAGE",
-      userId: input.userId,
-    });
+    for (const customerId of customerIds) {
+      await createBooking({
+        sessionId: session.id,
+        customerId,
+        paymentSourceType: "PACKAGE",
+        userId: input.userId,
+      });
+    }
 
     if (input.syncToGoogle) {
       await updateSession({
@@ -755,7 +794,7 @@ export async function saveSessionAction(
   formData: FormData,
 ): Promise<FormState> {
   const user = await requireUser();
-  const parsed = sessionFormSchema.safeParse(formDataToObject(formData));
+  const parsed = sessionFormSchema.safeParse(sessionFormDataToObject(formData));
 
   if (!parsed.success) {
     return fromZodError(parsed.error);
@@ -790,12 +829,14 @@ export async function saveSessionAction(
         userId: user.id,
       });
     } else {
-      if (!parsed.data.customerId) {
+      const customerIds = uniqueIds(parsed.data.customerIds.length ? parsed.data.customerIds : parsed.data.customerId ? [parsed.data.customerId] : []);
+
+      if (!customerIds.length) {
         return {
           ok: false,
-          message: "Select a customer.",
+          message: "Select customers.",
           fieldErrors: {
-            customerId: ["Select a customer."],
+            customerIds: ["Select customers."],
           },
         };
       }
@@ -805,7 +846,7 @@ export async function saveSessionAction(
           await createWeeklyRecurringSeries({
             classTypeId: parsed.data.classTypeId,
             instructorId: parsed.data.instructorId,
-            customerId: parsed.data.customerId,
+            customerIds,
             title: parsed.data.title,
             date: parsed.data.date,
             startTime: parsed.data.startTime,
@@ -816,14 +857,14 @@ export async function saveSessionAction(
           });
 
           revalidateCorePaths();
-          revalidatePath(`/customers/${parsed.data.customerId}`);
+          customerIds.forEach((customerId) => revalidatePath(`/customers/${customerId}`));
           redirect(getRedirectTo(formData, "/calendar"));
         }
 
-        session = await createSessionWithInitialBooking({
+        session = await createSessionWithInitialBookings({
           classTypeId: parsed.data.classTypeId,
           instructorId: parsed.data.instructorId,
-          customerId: parsed.data.customerId,
+          customerIds,
           title: parsed.data.title,
           date: parsed.data.date,
           startTime: parsed.data.startTime,
@@ -833,12 +874,16 @@ export async function saveSessionAction(
           userId: user.id,
         });
       } catch (bookingError) {
-        if (bookingError instanceof Error && bookingError.message === "Matching balance required.") {
+        if (
+          bookingError instanceof Error &&
+          (bookingError.message === "Matching balance required." ||
+            bookingError.message === "No valid package for this class.")
+        ) {
           return {
             ok: false,
             message: "No active balance for this class.",
             fieldErrors: {
-              customerId: ["Matching balance required."],
+              customerIds: ["Matching balance required."],
             },
           };
         }
@@ -849,9 +894,8 @@ export async function saveSessionAction(
 
     revalidateCorePaths();
     revalidatePath(`/sessions/${session.id}`);
-    if (parsed.data.customerId) {
-      revalidatePath(`/customers/${parsed.data.customerId}`);
-    }
+    uniqueIds(parsed.data.customerIds.length ? parsed.data.customerIds : parsed.data.customerId ? [parsed.data.customerId] : [])
+      .forEach((customerId) => revalidatePath(`/customers/${customerId}`));
     redirect(getRedirectTo(formData, `/sessions/${session.id}`));
   } catch (error) {
     return actionError(error);
@@ -863,18 +907,20 @@ export async function createCalendarSessionAction(
   formData: FormData,
 ): Promise<FormState> {
   const user = await requireUser();
-  const parsed = sessionFormSchema.safeParse(formDataToObject(formData));
+  const parsed = sessionFormSchema.safeParse(sessionFormDataToObject(formData));
 
   if (!parsed.success) {
     return fromZodError(parsed.error);
   }
 
-  if (!parsed.data.customerId) {
+  const customerIds = uniqueIds(parsed.data.customerIds.length ? parsed.data.customerIds : parsed.data.customerId ? [parsed.data.customerId] : []);
+
+  if (!customerIds.length) {
     return {
       ok: false,
-      message: "Select a customer.",
+      message: "Select customers.",
       fieldErrors: {
-        customerId: ["Select a customer."],
+        customerIds: ["Select customers."],
       },
     };
   }
@@ -896,7 +942,7 @@ export async function createCalendarSessionAction(
       const recurringResult = await createWeeklyRecurringSeries({
         classTypeId: parsed.data.classTypeId,
         instructorId: parsed.data.instructorId,
-        customerId: parsed.data.customerId,
+        customerIds,
         title: parsed.data.title,
         date: parsed.data.date,
         startTime: parsed.data.startTime,
@@ -907,7 +953,7 @@ export async function createCalendarSessionAction(
       });
 
       revalidateCorePaths();
-      revalidatePath(`/customers/${parsed.data.customerId}`);
+      customerIds.forEach((customerId) => revalidatePath(`/customers/${customerId}`));
 
       return {
         ok: true,
@@ -919,10 +965,10 @@ export async function createCalendarSessionAction(
       };
     }
 
-    const session = await createSessionWithInitialBooking({
+    const session = await createSessionWithInitialBookings({
       classTypeId: parsed.data.classTypeId,
       instructorId: parsed.data.instructorId,
-      customerId: parsed.data.customerId,
+      customerIds,
       title: parsed.data.title,
       date: parsed.data.date,
       startTime: parsed.data.startTime,
@@ -934,7 +980,7 @@ export async function createCalendarSessionAction(
 
     revalidateCorePaths();
     revalidatePath(`/sessions/${session.id}`);
-    revalidatePath(`/customers/${parsed.data.customerId}`);
+    customerIds.forEach((customerId) => revalidatePath(`/customers/${customerId}`));
 
     return {
       ok: true,
@@ -942,12 +988,15 @@ export async function createCalendarSessionAction(
       entityId: session.id,
     };
   } catch (error) {
-    if (error instanceof Error && error.message === "Matching balance required.") {
+    if (
+      error instanceof Error &&
+      (error.message === "Matching balance required." || error.message === "No valid package for this class.")
+    ) {
       return {
         ok: false,
         message: "No active balance for this class.",
         fieldErrors: {
-          customerId: ["Matching balance required."],
+          customerIds: ["Matching balance required."],
         },
       };
     }
@@ -1069,6 +1118,25 @@ export async function updateBookingStatusAction(
   } catch (error) {
     return actionError(error);
   }
+}
+
+export async function cancelBookingAction(formData: FormData) {
+  const user = await requireUser();
+  const bookingId = formData.get("bookingId");
+
+  if (typeof bookingId !== "string" || !bookingId) {
+    throw new Error("Booking id is required.");
+  }
+
+  const booking = await cancelBooking({
+    bookingId,
+    userId: user.id,
+  });
+
+  revalidateCorePaths();
+  revalidatePath(`/sessions/${booking.sessionId}`);
+  revalidatePath(`/customers/${booking.customerId}`);
+  redirect(getRedirectTo(formData, `/sessions/${booking.sessionId}`));
 }
 
 export async function adjustPackageCreditsAction(

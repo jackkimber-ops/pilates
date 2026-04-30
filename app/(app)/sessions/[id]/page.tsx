@@ -15,7 +15,7 @@ import { buttonStyles } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Sheet } from "@/components/ui/sheet";
-import { cancelSessionAction } from "@/app/(app)/actions";
+import { cancelBookingAction, cancelSessionAction } from "@/app/(app)/actions";
 import { BookingForm } from "@/app/(app)/sessions/[id]/booking-form";
 import { RestoreBookingUsageForm } from "@/app/(app)/sessions/[id]/restore-booking-usage-form";
 import { RestoreSessionUsageForm } from "@/app/(app)/sessions/[id]/restore-session-usage-form";
@@ -371,6 +371,12 @@ export default async function SessionDetailPage({
     .filter((item) => item.availableQuantity > 0);
 
   const activeBookingCount = session.bookings.filter((booking) => booking.status !== "CANCELLED").length;
+  const activeBookedCustomerIds = new Set(
+    session.bookings
+      .filter((booking) => booking.status !== "CANCELLED")
+      .map((booking) => booking.customerId),
+  );
+  const availableBookingCustomers = customers.filter((customer) => !activeBookedCustomerIds.has(customer.id));
   const attendedBookingCount = session.bookings.filter((booking) => booking.status === "ATTENDED").length;
   const packageBackedCount = session.bookings.filter(
     (booking) => booking.status !== "CANCELLED" && booking.paymentSourceType === "PACKAGE",
@@ -762,18 +768,22 @@ export default async function SessionDetailPage({
               </div>
               {session.status !== "CANCELLED" ? (
                 <div className="mt-4">
-                  <BookingForm
-                    sessionId={session.id}
-                    redirectTo={`/sessions/${session.id}`}
-                    customers={customers}
-                    packageBalanceOptions={packageBalanceOptions}
-                    singlePurchaseOptions={singlePurchaseOptions}
-                    trialPurchaseOptions={trialPurchaseOptions.map((option) => ({
-                      id: option.id,
-                      customerId: option.customerId,
-                      label: option.label,
-                    }))}
-                  />
+                  {activeBookingCount >= session.capacity ? (
+                    <EmptyState title="Session full" />
+                  ) : (
+                    <BookingForm
+                      sessionId={session.id}
+                      redirectTo={`/sessions/${session.id}`}
+                      customers={availableBookingCustomers}
+                      packageBalanceOptions={packageBalanceOptions}
+                      singlePurchaseOptions={singlePurchaseOptions}
+                      trialPurchaseOptions={trialPurchaseOptions.map((option) => ({
+                        id: option.id,
+                        customerId: option.customerId,
+                        label: option.label,
+                      }))}
+                    />
+                  )}
                 </div>
               ) : (
                 <div className="mt-4">
@@ -841,6 +851,15 @@ export default async function SessionDetailPage({
                           redirectTo={`/sessions/${session.id}`}
                           currentStatus={booking.status}
                         />
+                        {booking.status !== "CANCELLED" ? (
+                          <form action={cancelBookingAction}>
+                            <input type="hidden" name="bookingId" value={booking.id} />
+                            <input type="hidden" name="redirectTo" value={`/sessions/${session.id}`} />
+                            <button type="submit" className={buttonStyles({ variant: "secondary", size: "sm", className: "w-full" })}>
+                              Remove customer
+                            </button>
+                          </form>
+                        ) : null}
                         {booking.creditDeducted || booking.singleUseConsumed || booking.trialUseConsumed ? (
                           <RestoreBookingUsageForm
                             bookingId={booking.id}

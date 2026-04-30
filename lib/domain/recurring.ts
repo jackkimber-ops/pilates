@@ -244,7 +244,8 @@ export async function generateRecurringBookings(input: {
 }
 
 export async function createWeeklyRecurringSeries(input: {
-  customerId: string;
+  customerId?: string;
+  customerIds?: string[];
   classTypeId: string;
   instructorId: string;
   title: string;
@@ -256,6 +257,16 @@ export async function createWeeklyRecurringSeries(input: {
   occurrences?: number;
   userId?: string;
 }) {
+  const customerIds = Array.from(new Set(input.customerIds?.length ? input.customerIds : input.customerId ? [input.customerId] : []));
+
+  if (!customerIds.length) {
+    throw new Error("Select customers.");
+  }
+
+  if (customerIds.length > input.capacity) {
+    throw new Error("Customer count exceeds session capacity.");
+  }
+
   const classType = await prisma.classType.findUnique({
     where: {
       id: input.classTypeId,
@@ -269,24 +280,64 @@ export async function createWeeklyRecurringSeries(input: {
     throw new Error("Class type not found.");
   }
 
+  const availableBalances = await prisma.customerPackage.findMany({
+    where: {
+      customerId: {
+        in: customerIds,
+      },
+      classTypeId: input.classTypeId,
+      active: true,
+      remainingCredits: {
+        gt: 0,
+      },
+      OR: [
+        {
+          expiryDate: null,
+        },
+        {
+          expiryDate: {
+            gte: combineDateAndTime(input.date, input.startTime),
+          },
+        },
+      ],
+    },
+    select: {
+      customerId: true,
+    },
+  });
+
+  const customersWithBalance = new Set(availableBalances.map((balance) => balance.customerId));
+  if (customerIds.some((customerId) => !customersWithBalance.has(customerId))) {
+    throw new Error("Matching balance required.");
+  }
+
   const occurrences = input.occurrences ?? DEFAULT_WEEKLY_RECURRING_OCCURRENCES;
   const startDate = input.date;
   const endDate = toDateInputValue(addWeeks(toStoredDate(startDate), occurrences - 1));
   const weekday = formatInTimeZone(combineDateAndTime(input.date, "12:00"), APP_TIMEZONE, "EEEE").toUpperCase() as Weekday;
 
-  const rule = await createRecurringRule({
-    customerId: input.customerId,
-    classTypeId: input.classTypeId,
-    instructorId: input.instructorId,
-    dayOfWeek: weekday,
-    startTime: input.startTime,
-    startDate,
-    endDate,
-    active: true,
-    notes: input.notes,
-    paymentSourceType: "PACKAGE",
-    userId: input.userId,
-  });
+  const rules = await Promise.all(
+    customerIds.map((customerId) =>
+      createRecurringRule({
+        customerId,
+        classTypeId: input.classTypeId,
+        instructorId: input.instructorId,
+        dayOfWeek: weekday,
+        startTime: input.startTime,
+        startDate,
+        endDate,
+        active: true,
+        notes: input.notes,
+        paymentSourceType: "PACKAGE",
+        userId: input.userId,
+      }),
+    ),
+  );
+  const primaryRule = rules[0];
+
+  if (!primaryRule) {
+    throw new Error("Recurring rule was not created.");
+  }
 
   const createdSessionIds: string[] = [];
   const conflicts: string[] = [];
@@ -304,17 +355,29 @@ export async function createWeeklyRecurringSeries(input: {
         capacity: input.capacity,
         notes: input.notes,
         syncToGoogle: input.syncToGoogle,
-        recurringBookingRuleId: rule.id,
+        recurringBookingRuleId: primaryRule.id,
         userId: input.userId,
       });
 
-      await createBooking({
-        sessionId: session.id,
-        customerId: input.customerId,
-        paymentSourceType: "PACKAGE",
-        recurringBookingRuleId: rule.id,
-        userId: input.userId,
-      });
+      try {
+        for (const [customerIndex, customerId] of customerIds.entries()) {
+          await createBooking({
+            sessionId: session.id,
+            customerId,
+            paymentSourceType: "PACKAGE",
+            recurringBookingRuleId: rules[customerIndex]?.id,
+            userId: input.userId,
+          });
+        }
+      } catch (bookingError) {
+        await prisma.session.delete({
+          where: {
+            id: session.id,
+          },
+        });
+
+        throw bookingError;
+      }
 
       createdSessionIds.push(session.id);
     } catch (error) {
@@ -323,9 +386,11 @@ export async function createWeeklyRecurringSeries(input: {
   }
 
   if (!createdSessionIds.length) {
-    await prisma.recurringBookingRule.delete({
+    await prisma.recurringBookingRule.deleteMany({
       where: {
-        id: rule.id,
+        id: {
+          in: rules.map((rule) => rule.id),
+        },
       },
     });
 
@@ -335,9 +400,10 @@ export async function createWeeklyRecurringSeries(input: {
   await logAudit({
     userId: input.userId,
     entityType: "RecurringBookingRule",
-    entityId: rule.id,
+    entityId: primaryRule.id,
     action: "CREATE_WEEKLY_RECURRING_SERIES",
     details: {
+      customerIds,
       startDate,
       endDate,
       createdSessionIds,
@@ -347,7 +413,7 @@ export async function createWeeklyRecurringSeries(input: {
   });
 
   return {
-    ruleId: rule.id,
+    ruleId: primaryRule.id,
     createdSessionIds,
     conflicts,
     startDate,

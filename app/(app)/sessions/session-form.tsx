@@ -94,6 +94,7 @@ type SessionFormProps = {
     classTypeId?: string;
     instructorId?: string;
     customerId?: string;
+    customerIds?: string[];
     title?: string;
     date?: string;
     startTime?: string;
@@ -127,7 +128,9 @@ export function SessionForm({
   const [selectedClassTypeId, setSelectedClassTypeId] = useState(
     initialValues?.classTypeId ?? classTypes[0]?.id ?? "",
   );
-  const [selectedCustomerId, setSelectedCustomerId] = useState(initialValues?.customerId ?? "");
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>(
+    initialValues?.customerIds ?? (initialValues?.customerId ? [initialValues.customerId] : []),
+  );
   const selectedClassType =
     classTypes.find((classType) => classType.id === selectedClassTypeId) ?? classTypes[0];
   const [title, setTitle] = useState(initialValues?.title ?? selectedClassType?.name ?? "");
@@ -145,11 +148,24 @@ export function SessionForm({
       ),
     [packageAvailability],
   );
-  const selectedPackageAvailability = useMemo(
-    () =>
-      packageAvailabilityByKey.get(`${selectedCustomerId}:${selectedClassTypeId}`) ?? null,
-    [packageAvailabilityByKey, selectedCustomerId, selectedClassTypeId],
+  const selectedCustomers = useMemo(
+    () => selectedCustomerIds
+      .map((customerId) => customers.find((customer) => customer.id === customerId))
+      .filter((customer): customer is { id: string; fullName: string } => Boolean(customer)),
+    [customers, selectedCustomerIds],
   );
+  const selectedPackageAvailabilities = useMemo(
+    () =>
+      selectedCustomerIds.map((customerId) => ({
+        customerId,
+        availability: packageAvailabilityByKey.get(`${customerId}:${selectedClassTypeId}`) ?? null,
+      })),
+    [packageAvailabilityByKey, selectedCustomerIds, selectedClassTypeId],
+  );
+  const missingPackageCustomerIds = selectedPackageAvailabilities
+    .filter((entry) => !entry.availability)
+    .map((entry) => entry.customerId);
+  const customersToAdd = customers.filter((customer) => !selectedCustomerIds.includes(customer.id));
   const normalizedStartTime = useMemo(
     () => to24HourTime(selectedHour, selectedMinute, selectedPeriod),
     [selectedHour, selectedMinute, selectedPeriod],
@@ -159,7 +175,9 @@ export function SessionForm({
     [normalizedStartTime, selectedClassType?.durationMinutes],
   );
   const isCreateMode = !initialValues?.id;
-  const missingPackage = isCreateMode && selectedCustomerId !== "" && !selectedPackageAvailability;
+  const overCapacity = isCreateMode && selectedCustomerIds.length > capacity;
+  const missingPackage = isCreateMode && selectedCustomerIds.length > 0 && missingPackageCustomerIds.length > 0;
+  const missingCustomers = isCreateMode && selectedCustomerIds.length === 0;
   const lastSuccessRef = useRef<string | null>(null);
   const isQuickLayout = layout === "quick";
 
@@ -181,6 +199,10 @@ export function SessionForm({
       <form action={action} className="space-y-6">
       {redirectTo ? <input type="hidden" name="redirectTo" value={redirectTo} /> : null}
       {initialValues?.id ? <input type="hidden" name="id" value={initialValues.id} /> : null}
+      {selectedCustomerIds[0] ? <input type="hidden" name="customerId" value={selectedCustomerIds[0]} /> : null}
+      {selectedCustomerIds.map((customerId) => (
+        <input key={customerId} type="hidden" name="customerIds" value={customerId} />
+      ))}
 
       <FormMessage state={state} />
 
@@ -207,20 +229,50 @@ export function SessionForm({
       </Field>
 
       {isCreateMode ? (
-        <Field label="Customer" htmlFor="customerId" error={state.fieldErrors?.customerId?.[0]}>
+        <Field label="Customers" htmlFor="customerId" error={state.fieldErrors?.customerIds?.[0] ?? state.fieldErrors?.customerId?.[0]}>
           <Select
             id="customerId"
-            name="customerId"
-            value={selectedCustomerId}
-            onChange={(event) => setSelectedCustomerId(event.target.value)}
+            value=""
+            disabled={selectedCustomerIds.length >= capacity}
+            onChange={(event) => {
+              const nextCustomerId = event.target.value;
+
+              if (!nextCustomerId || selectedCustomerIds.includes(nextCustomerId) || selectedCustomerIds.length >= capacity) {
+                return;
+              }
+
+              setSelectedCustomerIds((current) => [...current, nextCustomerId]);
+            }}
           >
-            <option value="">Select customer</option>
-            {customers.map((customer) => (
+            <option value="">
+              {selectedCustomerIds.length >= capacity ? "Capacity reached" : "Add customer"}
+            </option>
+            {customersToAdd.map((customer) => (
               <option key={customer.id} value={customer.id}>
                 {customer.fullName}
               </option>
             ))}
           </Select>
+
+          {selectedCustomers.length ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {selectedCustomers.map((customer) => (
+                <span
+                  key={customer.id}
+                  className="inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-2 text-sm font-semibold text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]"
+                >
+                  {customer.fullName}
+                  <button
+                    type="button"
+                    className="text-xs font-semibold uppercase tracking-[0.12em] text-muted transition hover:text-ink"
+                    onClick={() => setSelectedCustomerIds((current) => current.filter((id) => id !== customer.id))}
+                  >
+                    Remove
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : null}
         </Field>
       ) : null}
 
@@ -228,42 +280,47 @@ export function SessionForm({
         <div className="surface-inset rounded-[24px] p-4">
           <div className="section-header">
             <div className="space-y-1.5">
-              <p className="section-kicker">{isQuickLayout ? "Balance" : "Package check"}</p>
+              <p className="section-kicker">{isQuickLayout ? "Balances" : "Package check"}</p>
               <h3 className="font-display text-[1.3rem] leading-none tracking-[-0.04em] text-ink">
-                {selectedCustomerId
-                  ? selectedPackageAvailability
-                    ? "Balance available"
-                    : "No active balance"
-                  : "Select a customer"}
+                {selectedCustomerIds.length
+                  ? missingPackage
+                    ? "Missing balance"
+                    : "Balances available"
+                  : "Select customers"}
               </h3>
             </div>
-            {selectedPackageAvailability ? <Badge tone="sage">Ready</Badge> : <Badge tone="warm">Required</Badge>}
+            <Badge tone={selectedCustomerIds.length && !missingPackage && !overCapacity ? "sage" : "warm"}>
+              {selectedCustomerIds.length}/{capacity}
+            </Badge>
           </div>
 
           <div className="mt-3 text-sm leading-6 text-muted">
-            {selectedPackageAvailability ? (
-              <>
-                <p>
-                  Next package: <span className="font-semibold text-ink">{selectedPackageAvailability.nextPackageName}</span>
-                </p>
-                <p>
-                  Remaining:{" "}
-                  <span className="font-semibold text-ink">
-                    {formatNumber(selectedPackageAvailability.totalRemainingCredits)}
-                  </span>
-                </p>
-                <p>
-                  Source:{" "}
-                  <span className="font-semibold text-ink">
-                    {selectedPackageAvailability.sourceType === "IMPORTED" ? "Imported balance" : "Package"}
-                  </span>
-                </p>
+            {selectedPackageAvailabilities.length ? (
+              <div className="space-y-2">
+                {selectedPackageAvailabilities.map(({ customerId, availability }) => {
+                  const customer = customers.find((item) => item.id === customerId);
+
+                  return (
+                    <p key={customerId}>
+                      <span className="font-semibold text-ink">{customer?.fullName ?? "Customer"}</span>
+                      {": "}
+                      {availability ? (
+                        <>
+                          {formatNumber(availability.totalRemainingCredits)} remaining
+                          {" / "}
+                          {availability.sourceType === "IMPORTED" ? "Imported" : availability.nextPackageName}
+                        </>
+                      ) : (
+                        <span className="text-danger">No matching balance</span>
+                      )}
+                    </p>
+                  );
+                })}
+                {overCapacity ? <p className="text-danger">Too many customers for this capacity.</p> : null}
                 <p>Credits are deducted on attendance.</p>
-              </>
-            ) : selectedCustomerId ? (
-              <p>Matching balance required.</p>
+              </div>
             ) : (
-              <p>Select a customer.</p>
+              <p>Select customers.</p>
             )}
           </div>
         </div>
@@ -387,7 +444,7 @@ export function SessionForm({
               className="w-full md:w-auto"
               size={isQuickLayout ? "md" : "lg"}
               pendingLabel={pendingLabel ?? (initialValues?.id ? "Saving..." : "Creating...")}
-              disabled={missingPackage}
+              disabled={missingCustomers || missingPackage || overCapacity}
             >
               {submitLabel ?? (initialValues?.id ? "Save session" : "Create session")}
             </SubmitButton>

@@ -21,6 +21,17 @@ const optionalEmail = z.preprocess(
 const requiredId = z.string().trim().min(1, "Select an option.");
 const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid date.");
 const timeString = z.string().regex(/^\d{2}:\d{2}$/, "Enter a valid time.");
+const stringArray = z.preprocess((value) => {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    return [value];
+  }
+
+  return [];
+}, z.array(z.string().trim().min(1)));
 const moneyNumber = z.coerce.number().min(0, "Enter an amount.");
 const integerNumber = z.coerce.number().int("Enter a whole number.");
 const signedIntegerNumber = z.preprocess((value) => {
@@ -256,6 +267,7 @@ export const sessionFormSchema = z.object({
   classTypeId: requiredId,
   instructorId: requiredId,
   customerId: z.preprocess(emptyToUndefined, z.string().optional()),
+  customerIds: stringArray.default([]),
   title: z.string().trim().min(2, "Enter a title."),
   date: dateString,
   startTime: timeString,
