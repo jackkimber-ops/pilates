@@ -72,6 +72,21 @@ async function assertNoSessionOverlap(input: {
   }
 }
 
+function hasScheduleChanged(
+  session: Pick<SessionForSync, "classTypeId" | "startsAt" | "endsAt">,
+  input: {
+    classTypeId: string;
+    startsAt: Date;
+    endsAt: Date;
+  },
+) {
+  return (
+    session.classTypeId !== input.classTypeId ||
+    session.startsAt.getTime() !== input.startsAt.getTime() ||
+    session.endsAt.getTime() !== input.endsAt.getTime()
+  );
+}
+
 async function loadSessionForSync(sessionId: string): Promise<SessionForSync | null> {
   return prisma.session.findUnique({
     where: { id: sessionId },
@@ -227,14 +242,21 @@ export async function updateSession(input: {
 
   const startsAt = combineDateAndTime(input.date, input.startTime);
   const endsAt = addMinutes(startsAt, classType.durationMinutes);
+  const shouldValidateStudioOverlap = hasScheduleChanged(existingSession, {
+    classTypeId: input.classTypeId,
+    startsAt,
+    endsAt,
+  });
 
   const updatedSession = await withStudioScheduleLock(async (tx) => {
-    await assertNoSessionOverlap({
-      tx,
-      startsAt,
-      endsAt,
-      excludeSessionId: input.sessionId,
-    });
+    if (shouldValidateStudioOverlap) {
+      await assertNoSessionOverlap({
+        tx,
+        startsAt,
+        endsAt,
+        excludeSessionId: input.sessionId,
+      });
+    }
 
     return tx.session.update({
       where: { id: input.sessionId },

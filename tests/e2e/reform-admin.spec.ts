@@ -598,7 +598,7 @@ test("customers, sales, sessions, bookings, attendance, recurring, reports, and 
   await page.getByLabel("Customer").selectOption({ label: "Maya Rivera" });
   await choosePaymentSource(page, "Override");
   await page.getByRole("button", { name: "Add booking" }).click();
-  await expect(page.getByText("Session is full.")).toBeVisible();
+  await expect(page.getByText("Class is full.")).toBeVisible();
 
   await danielCard.getByRole("combobox").selectOption("CANCELLED");
   await danielCard.getByRole("button", { name: "Update status" }).click();

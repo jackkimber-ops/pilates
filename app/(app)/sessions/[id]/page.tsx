@@ -769,7 +769,7 @@ export default async function SessionDetailPage({
               {session.status !== "CANCELLED" ? (
                 <div className="mt-4">
                   {activeBookingCount >= session.capacity ? (
-                    <EmptyState title="Session full" />
+                    <EmptyState title="Class is full" />
                   ) : (
                     <BookingForm
                       sessionId={session.id}

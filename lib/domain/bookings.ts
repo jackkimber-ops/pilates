@@ -271,7 +271,7 @@ function getActiveBookingCount(session: SessionWithRelations) {
 
 async function ensureCapacityAvailable(session: SessionWithRelations) {
   if (getActiveBookingCount(session) >= session.capacity) {
-    throw new Error("Session is full.");
+    throw new Error("Class is full.");
   }
 }
 
