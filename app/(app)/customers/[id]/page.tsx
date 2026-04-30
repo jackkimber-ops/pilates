@@ -60,6 +60,27 @@ function getPurchaseStatusTone(status: string) {
   return "neutral";
 }
 
+function getCreditHistoryLabel(type: string) {
+  if (type === "PACKAGE_PURCHASE") return "Package purchased";
+  if (type === "ATTENDED") return "Attended";
+  if (type === "CANCELLED") return "Cancelled";
+  return "Manual adjustment";
+}
+
+function getCreditHistoryTone(change: number) {
+  return change > 0 ? "sage" : "warm";
+}
+
+function formatCreditChange(change: number) {
+  return change > 0 ? `+${change}` : `${change}`;
+}
+
+function getCreditHistoryNote(type: string, note?: string | null) {
+  if (!note) return null;
+
+  return note.toLowerCase() === getCreditHistoryLabel(type).toLowerCase() ? null : note;
+}
+
 export default async function CustomerDetailPage({
   params,
 }: {
@@ -77,6 +98,7 @@ export default async function CustomerDetailPage({
     singleClassPurchases,
     bookings,
     recurringRules,
+    creditHistory,
     classTypes,
   ] = await Promise.all([
     prisma.customer.findUnique({
@@ -343,6 +365,32 @@ export default async function CustomerDetailPage({
         createdAt: "desc",
       },
     }),
+    prisma.customerCreditHistory.findMany({
+      where: {
+        customerId: id,
+      },
+      select: {
+        id: true,
+        change: true,
+        type: true,
+        note: true,
+        createdAt: true,
+        classType: {
+          select: {
+            name: true,
+          },
+        },
+        relatedSession: {
+          select: {
+            startsAt: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 50,
+    }),
     prisma.classType.findMany({
       where: {
         active: true,
@@ -417,6 +465,7 @@ export default async function CustomerDetailPage({
     singleClassPurchases,
     bookings,
     recurringRules,
+    creditHistory,
   };
 
   const paymentHistory = [
@@ -535,7 +584,8 @@ export default async function CustomerDetailPage({
           { href: "#balances", label: "Balances" },
           { href: "#trials", label: "Trials" },
           { href: "#profile", label: "Profile" },
-          { href: "#history", label: "History" },
+          { href: "#credit-history", label: "History" },
+          { href: "#bookings", label: "Bookings" },
           { href: "#payments", label: "Payments" },
         ]}
       />
@@ -981,6 +1031,49 @@ export default async function CustomerDetailPage({
         </Sheet>
       </section>
 
+      <Card id="credit-history" variant="soft" className="scroll-mt-28 space-y-4">
+        <div className="section-header">
+          <div className="space-y-2">
+            <p className="section-kicker">History</p>
+            <h2 className="section-title">Credit history</h2>
+          </div>
+          <Badge tone="outline">Last 50</Badge>
+        </div>
+
+        <div className="space-y-3">
+          {customer.creditHistory.length ? (
+            customer.creditHistory.map((entry) => {
+              const note = getCreditHistoryNote(entry.type, entry.note);
+
+              return (
+                <div key={entry.id} className="list-row-quiet">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-ink">{getCreditHistoryLabel(entry.type)}</p>
+                      <p className="mt-1 text-sm leading-6 text-muted">
+                        {compactList([
+                          entry.classType.name,
+                          entry.relatedSession ? toDateTimeLabel(entry.relatedSession.startsAt) : null,
+                          note,
+                        ])}
+                      </p>
+                      <p className="mt-2 text-xs uppercase tracking-[0.16em] text-muted">
+                        {toShortDate(entry.createdAt)}
+                      </p>
+                    </div>
+                    <Badge tone={getCreditHistoryTone(entry.change)} className="shrink-0">
+                      {formatCreditChange(entry.change)}
+                    </Badge>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="empty-state">No history yet.</div>
+          )}
+        </div>
+      </Card>
+
       <section className="grid gap-5 xl:grid-cols-[1.02fr_0.98fr]">
         <Card id="trials" className="scroll-mt-28 space-y-4">
           <div className="section-header">
@@ -1150,7 +1243,7 @@ export default async function CustomerDetailPage({
           </div>
         </Card>
 
-        <Card id="history" variant="soft" className="scroll-mt-28 space-y-4">
+        <Card id="bookings" variant="soft" className="scroll-mt-28 space-y-4">
           <div className="section-header">
             <div className="space-y-2">
               <p className="section-kicker">Booking history</p>

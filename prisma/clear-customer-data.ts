@@ -24,6 +24,7 @@ async function getCounts() {
     customerTrialPackages,
     customerTrialPackageItems,
     customerTrialItemTransactions,
+    customerCreditHistory,
     packageAdjustments,
     bookings,
     recurringRules,
@@ -37,6 +38,7 @@ async function getCounts() {
     prisma.customerTrialPackage.count(),
     prisma.customerTrialPackageItem.count(),
     prisma.customerTrialPackageItemTransaction.count(),
+    prisma.customerCreditHistory.count(),
     prisma.packageAdjustment.count(),
     prisma.booking.count(),
     prisma.recurringBookingRule.count(),
@@ -58,6 +60,7 @@ async function getCounts() {
     customerTrialPackages,
     customerTrialPackageItems,
     customerTrialItemTransactions,
+    customerCreditHistory,
     packageAdjustments,
     bookings,
     recurringRules,
@@ -86,6 +89,7 @@ async function main() {
       },
     });
 
+    await tx.customerCreditHistory.deleteMany();
     await tx.customerPackageTransaction.deleteMany();
     await tx.customerTrialPackageItemTransaction.deleteMany();
     await tx.packageAdjustment.deleteMany();

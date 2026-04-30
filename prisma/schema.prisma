@@ -80,6 +80,13 @@ enum CustomerTrialPackageItemTransactionType {
   ADJUSTMENT
 }
 
+enum CreditHistoryType {
+  PACKAGE_PURCHASE
+  ATTENDED
+  CANCELLED
+  MANUAL_ADJUSTMENT
+}
+
 enum Weekday {
   SUNDAY
   MONDAY
@@ -121,20 +128,21 @@ model AdminSession {
 }
 
 model Customer {
-  id                   String                 @id @default(cuid())
+  id                   String                  @id @default(cuid())
   fullName             String
   phone                String?
-  email                String?                @unique
+  email                String?                 @unique
   notes                String?
-  tags                 String[]               @default([])
-  status               CustomerStatus         @default(ACTIVE)
+  tags                 String[]                @default([])
+  status               CustomerStatus          @default(ACTIVE)
   packages             CustomerPackage[]
   trialPackages        CustomerTrialPackage[]
   bookings             Booking[]
   singleClassPurchases SingleClassPurchase[]
   recurringRules       RecurringBookingRule[]
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
+  creditHistory        CustomerCreditHistory[]
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
 
   @@index([fullName])
   @@index([status, fullName])
@@ -169,6 +177,7 @@ model ClassType {
   sessions           Session[]
   singlePurchases    SingleClassPurchase[]
   recurringRules     RecurringBookingRule[]
+  creditHistory      CustomerCreditHistory[]
   createdAt          DateTime                   @default(now())
   updatedAt          DateTime                   @updatedAt
 
@@ -340,6 +349,7 @@ model Session {
   classType              ClassType                             @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
   instructor             Instructor                            @relation(fields: [instructorId], references: [id], onDelete: Restrict)
   bookings               Booking[]
+  creditHistory          CustomerCreditHistory[]
   packageTransactions    CustomerPackageTransaction[]
   trialItemTransactions  CustomerTrialPackageItemTransaction[]
   recurringBookingRule   RecurringBookingRule?                 @relation(fields: [recurringBookingRuleId], references: [id], onDelete: SetNull)
@@ -377,6 +387,7 @@ model Booking {
   reversedByUser             User?                                 @relation("BookingReversedByUser", fields: [reversedByUserId], references: [id], onDelete: SetNull)
   packageTransactions        CustomerPackageTransaction[]
   trialItemTransactions      CustomerTrialPackageItemTransaction[]
+  creditHistory              CustomerCreditHistory[]
   createdAt                  DateTime                              @default(now())
   updatedAt                  DateTime                              @updatedAt
 
@@ -405,6 +416,7 @@ model CustomerPackageTransaction {
   session             Session?                       @relation(fields: [sessionId], references: [id], onDelete: SetNull)
   packageAdjustment   PackageAdjustment?             @relation(fields: [packageAdjustmentId], references: [id], onDelete: SetNull)
   createdByUser       User?                          @relation("CustomerPackageTransactionByUser", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  creditHistory       CustomerCreditHistory?
   createdAt           DateTime                       @default(now())
 
   @@index([customerPackageId, createdAt])
@@ -429,12 +441,39 @@ model CustomerTrialPackageItemTransaction {
   booking                    Booking?                                @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   session                    Session?                                @relation(fields: [sessionId], references: [id], onDelete: SetNull)
   createdByUser              User?                                   @relation("CustomerTrialItemTransactionByUser", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  creditHistory              CustomerCreditHistory?
   createdAt                  DateTime                                @default(now())
 
   @@index([customerTrialPackageItemId, createdAt])
   @@index([bookingId])
   @@index([sessionId])
   @@index([createdByUserId, createdAt])
+}
+
+model CustomerCreditHistory {
+  id                                    String                               @id @default(cuid())
+  customerId                            String
+  classTypeId                           String
+  change                                Int
+  type                                  CreditHistoryType
+  note                                  String?
+  relatedSessionId                      String?
+  relatedBookingId                      String?
+  customerPackageTransactionId          String?                              @unique
+  customerTrialPackageItemTransactionId String?                              @unique
+  customer                              Customer                             @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  classType                             ClassType                            @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
+  relatedSession                        Session?                             @relation(fields: [relatedSessionId], references: [id], onDelete: SetNull)
+  relatedBooking                        Booking?                             @relation(fields: [relatedBookingId], references: [id], onDelete: SetNull)
+  customerPackageTransaction            CustomerPackageTransaction?          @relation(fields: [customerPackageTransactionId], references: [id], onDelete: SetNull)
+  customerTrialPackageItemTransaction   CustomerTrialPackageItemTransaction? @relation(fields: [customerTrialPackageItemTransactionId], references: [id], onDelete: SetNull)
+  createdAt                             DateTime                             @default(now())
+
+  @@index([customerId, createdAt])
+  @@index([customerId, classTypeId, createdAt])
+  @@index([relatedSessionId])
+  @@index([relatedBookingId])
+  @@index([type, createdAt])
 }
 
 model RecurringBookingRule {
