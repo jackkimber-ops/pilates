@@ -6,6 +6,7 @@ import {
   CustomerTrialPackageItemTransactionType,
   PaymentSourceType,
   Prisma,
+  SessionStatus,
   SingleClassPurchaseStatus,
 } from "@prisma/client";
 import { ATTENDANCE_PENALTY_RULES } from "@/lib/constants";
@@ -1001,6 +1002,7 @@ export async function updateBookingStatus(input: {
   status: BookingStatus;
   notes?: string;
   skipRestore?: boolean;
+  source?: "MANUAL" | "AUTO_ATTENDANCE";
   userId?: string;
 }) {
   const result = await prisma.$transaction(async (tx) => {
@@ -1100,10 +1102,81 @@ export async function updateBookingStatus(input: {
       status: input.status,
       restoredSources: result.restoredSources,
       skipRestore: Boolean(input.skipRestore),
+      source: input.source ?? "MANUAL",
     },
   });
 
   return result.booking;
+}
+
+export async function autoAttendEndedBookings(input: {
+  now?: Date;
+  limit?: number;
+  userId?: string;
+} = {}) {
+  const now = input.now ?? getNow();
+  const limit = input.limit ?? 100;
+  const dueBookings = await prisma.booking.findMany({
+    where: {
+      status: BookingStatus.BOOKED,
+      session: {
+        status: {
+          not: SessionStatus.CANCELLED,
+        },
+        endsAt: {
+          lte: now,
+        },
+      },
+    },
+    select: {
+      id: true,
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+    take: limit,
+  });
+
+  const result = {
+    attended: 0,
+    failed: 0,
+    completedSessions: 0,
+  };
+
+  for (const booking of dueBookings) {
+    try {
+      await updateBookingStatus({
+        bookingId: booking.id,
+        status: BookingStatus.ATTENDED,
+        source: "AUTO_ATTENDANCE",
+        userId: input.userId,
+      });
+      result.attended += 1;
+    } catch (error) {
+      result.failed += 1;
+      console.warn(
+        "Auto-attendance skipped a booking",
+        booking.id,
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
+
+  const completedSessions = await prisma.session.updateMany({
+    where: {
+      status: SessionStatus.SCHEDULED,
+      endsAt: {
+        lte: now,
+      },
+    },
+    data: {
+      status: SessionStatus.COMPLETED,
+    },
+  });
+
+  result.completedSessions = completedSessions.count;
+
+  return result;
 }
 
 export async function cancelBooking(input: { bookingId: string; userId?: string }) {

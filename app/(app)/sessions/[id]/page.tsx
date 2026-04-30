@@ -23,6 +23,7 @@ import { BookingStatusForm } from "@/app/(app)/sessions/[id]/booking-status-form
 import { SessionForm } from "@/app/(app)/sessions/session-form";
 import { getCustomerBalanceLabel } from "@/lib/balances";
 import { formatSessionWindow, toDateInputValue } from "@/lib/date";
+import { autoAttendEndedBookings } from "@/lib/domain/bookings";
 import { isGoogleCalendarConfigured } from "@/lib/google-calendar";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveSessionStatus } from "@/lib/session-status";
@@ -55,6 +56,7 @@ export default async function SessionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  await autoAttendEndedBookings();
 
   const session = await prisma.session.findUnique({
     where: { id },
@@ -395,6 +397,10 @@ export default async function SessionDetailPage({
     (booking) => booking.creditDeducted || booking.singleUseConsumed || booking.trialUseConsumed,
   ).length;
   const effectiveSessionStatus = getEffectiveSessionStatus(session);
+  const autoAttendancePendingCount =
+    effectiveSessionStatus === "COMPLETED"
+      ? session.bookings.filter((booking) => booking.status === "BOOKED").length
+      : 0;
   const restorableCancelledBookingCount = session.bookings.filter(
     (booking) =>
       booking.status === "CANCELLED" &&
@@ -415,6 +421,14 @@ export default async function SessionDetailPage({
     sessionAlerts.push({
       title: `${overrideCount} override booking${overrideCount === 1 ? "" : "s"}`,
       detail: "No automatic deduction.",
+      tone: "warning",
+    });
+  }
+
+  if (autoAttendancePendingCount > 0) {
+    sessionAlerts.push({
+      title: `${autoAttendancePendingCount} attendance pending`,
+      detail: "Check balance or set override.",
       tone: "warning",
     });
   }

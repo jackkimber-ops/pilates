@@ -1,4 +1,5 @@
 import { getNow, getTodayRangeInAppTimezone } from "@/lib/date";
+import { autoAttendEndedBookings } from "@/lib/domain/bookings";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveSessionStatus, type SessionStatusValue } from "@/lib/session-status";
 
@@ -102,6 +103,8 @@ function serializeSession(session: DashboardSessionRecord, now: Date): Dashboard
 }
 
 export async function getDashboardLiveSessions(now = getNow()): Promise<DashboardLiveSessionsPayload> {
+  await autoAttendEndedBookings({ now });
+
   const { start: todayStart, end: tomorrowStart } = getTodayRangeInAppTimezone(now);
 
   const [todaySessions, upcomingSessions] = await Promise.all([

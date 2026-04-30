@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
+import { autoAttendEndedBookings } from "@/lib/domain/bookings";
 import { getInstructorCalendarTheme } from "@/lib/instructor-theme";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveSessionStatus, getSessionTemporalState } from "@/lib/session-status";
@@ -90,6 +91,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Start and end are required." }, { status: 400 });
   }
 
+  const now = new Date();
+  await autoAttendEndedBookings({ now });
+
   const sessions = await prisma.session.findMany({
     where: {
       status: {
@@ -140,7 +144,6 @@ export async function GET(request: Request) {
     },
   });
 
-  const now = new Date();
   const events = sessions.map((session) => {
     const instructorTheme = getInstructorCalendarTheme(session.instructor.fullName);
     const effectiveStatus = getEffectiveSessionStatus(session, now);
