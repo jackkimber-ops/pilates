@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { DayHeaderContentArg, EventContentArg } from "@fullcalendar/core";
 import FullCalendar from "@fullcalendar/react";
@@ -28,6 +28,8 @@ const STATUS_LABELS: Record<string, string> = {
   CANCELLED: "Cancelled",
   COMPLETED: "Completed",
 };
+
+const CALENDAR_TIME_STATE_REFRESH_MS = 60_000;
 
 function toLocalDateInputValue(value: Date) {
   const year = value.getFullYear();
@@ -73,6 +75,7 @@ function formatCompactEventTime(value: Date | null) {
 
 function renderEventContent(info: EventContentArg) {
   const status = String(info.event.extendedProps.status ?? "SCHEDULED");
+  const temporalState = String(info.event.extendedProps.temporalState ?? "UPCOMING");
   const classTypeName = String(info.event.extendedProps.classTypeName ?? info.event.title);
   const instructorName = String(info.event.extendedProps.instructorName ?? "");
   const customerPreviewLines = Array.isArray(info.event.extendedProps.customerPreviewLines)
@@ -95,7 +98,8 @@ function renderEventContent(info: EventContentArg) {
         "calendar-event-shell",
         isMonthView ? "calendar-event-shell-month" : "calendar-event-shell-time",
         status === "CANCELLED" ? "calendar-event-shell-cancelled" : undefined,
-        status === "COMPLETED" ? "calendar-event-shell-completed" : undefined,
+        temporalState === "COMPLETED" ? "calendar-event-shell-completed" : undefined,
+        temporalState === "IN_PROGRESS" ? "calendar-event-shell-in-progress" : undefined,
       )}
       style={
         {
@@ -147,7 +151,7 @@ export function CalendarBoard() {
     });
   };
 
-  const refreshCalendarEvents = (options: { refreshPage?: boolean } = {}) => {
+  const refreshCalendarEvents = useCallback((options: { refreshPage?: boolean } = {}) => {
     const shouldRefreshPage = options.refreshPage ?? true;
     calendarRef.current?.getApi().refetchEvents();
 
@@ -156,7 +160,7 @@ export function CalendarBoard() {
         router.refresh();
       });
     }
-  };
+  }, [router, startRefreshTransition]);
 
   const handleSessionDeleted = (sessionId: string) => {
     setSelectedSessionId(null);
@@ -191,6 +195,27 @@ export function CalendarBoard() {
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        refreshCalendarEvents({ refreshPage: false });
+      }
+    }, CALENDAR_TIME_STATE_REFRESH_MS);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshCalendarEvents({ refreshPage: false });
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [refreshCalendarEvents]);
 
   return (
     <div className="space-y-3.5">

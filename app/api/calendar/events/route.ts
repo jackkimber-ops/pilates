@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getInstructorCalendarTheme } from "@/lib/instructor-theme";
 import { prisma } from "@/lib/prisma";
-import { getEffectiveSessionStatus } from "@/lib/session-status";
+import { getEffectiveSessionStatus, getSessionTemporalState } from "@/lib/session-status";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -144,6 +144,7 @@ export async function GET(request: Request) {
   const events = sessions.map((session) => {
     const instructorTheme = getInstructorCalendarTheme(session.instructor.fullName);
     const effectiveStatus = getEffectiveSessionStatus(session, now);
+    const temporalState = getSessionTemporalState(session, now);
     const activeBookingCount = session.bookings.length;
     const attendeeNames = session.bookings.map((booking) => booking.customer.fullName);
     const customerPreview = buildCustomerPreview(attendeeNames);
@@ -166,6 +167,7 @@ export async function GET(request: Request) {
         bookingCount: activeBookingCount,
         capacity: session.capacity,
         status: effectiveStatus,
+        temporalState,
         category: session.classType.category,
         classTypeName: session.classType.name,
         customerPreviewLines: customerPreview.lines,
