@@ -752,6 +752,18 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
     0 18px 32px -30px rgba(74, 56, 51, 0.24);
 }
 
+.calendar-event-shell:not(.calendar-event-shell-completed):not(.calendar-event-shell-in-progress):not(.calendar-event-shell-cancelled) {
+  background: var(--color-accent-strong);
+  color: #ffffff;
+  outline: 1px solid var(--color-accent-strong);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 24px 42px -30px rgba(99, 69, 76, 0.6),
+    0 2px 5px rgba(48, 39, 38, 0.2);
+  filter: none;
+  opacity: 1;
+}
+
 .calendar-event-shell::before {
   content: "";
   position: absolute;
@@ -760,6 +772,12 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
   border-radius: 999px;
   background: var(--event-accent, var(--color-accent));
   opacity: 0.96;
+}
+
+.calendar-event-shell:not(.calendar-event-shell-completed):not(.calendar-event-shell-in-progress):not(.calendar-event-shell-cancelled)::before {
+  background: #fffaf6;
+  width: 5px;
+  opacity: 1;
 }
 
 .calendar-event-shell-time {
@@ -778,13 +796,18 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 }
 
 .calendar-event-shell-in-progress {
-  outline: 1px solid color-mix(in srgb, var(--event-accent, var(--color-accent)) 28%, transparent);
+  background: var(--color-accent-strong);
+  color: #ffffff;
+  outline: 1px solid rgba(255, 250, 246, 0.54);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.82),
-    0 18px 34px -28px color-mix(in srgb, var(--event-accent, var(--color-accent)) 24%, transparent);
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 24px 42px -30px rgba(99, 69, 76, 0.66),
+    0 2px 5px rgba(48, 39, 38, 0.22);
+  filter: none;
 }
 
 .calendar-event-shell-in-progress::before {
+  background: rgba(255, 252, 249, 0.92);
   width: 4px;
   opacity: 1;
 }
@@ -792,28 +815,73 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 .calendar-event-shell-completed {
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--event-accent-tint, rgba(255, 252, 249, 0.96)) 36%, rgba(248, 244, 240, 0.96)),
-    rgba(246, 241, 237, 0.95)
+    color-mix(in srgb, var(--event-accent-soft, rgba(241, 231, 237, 0.96)) 18%, #fffaf6),
+    color-mix(in srgb, var(--event-accent-tint, rgba(255, 252, 249, 0.96)) 12%, #f7f1ec)
   );
+  color: var(--color-ink);
+  outline: 1px solid rgba(134, 113, 108, 0.08);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.72),
-    0 12px 24px -28px rgba(74, 56, 51, 0.16);
-  filter: saturate(0.76);
+    inset 0 1px 0 rgba(255, 255, 255, 0.68),
+    0 6px 12px -24px rgba(74, 56, 51, 0.08);
+  filter: saturate(0.32);
+  opacity: 0.62;
 }
 
 .calendar-event-shell-completed::before {
-  background: color-mix(in srgb, var(--event-accent, var(--color-accent)) 44%, var(--color-muted));
-  opacity: 0.42;
+  background: color-mix(in srgb, var(--event-accent, var(--color-accent)) 24%, var(--color-muted));
+  opacity: 0.28;
 }
 
 .calendar-event-shell-completed .calendar-event-customer-summary {
-  color: color-mix(in srgb, var(--color-ink) 74%, var(--color-muted));
+  color: color-mix(in srgb, var(--color-ink) 90%, var(--color-muted));
+  font-weight: 500;
 }
 
 .calendar-event-shell-completed .calendar-event-title,
 .calendar-event-shell-completed .calendar-event-time,
 .calendar-event-shell-completed .calendar-event-instructor-chip {
-  color: color-mix(in srgb, var(--color-muted) 86%, var(--color-ink));
+  color: color-mix(in srgb, var(--color-ink) 64%, var(--color-muted));
+}
+
+.calendar-event-shell-completed .calendar-event-pill-neutral {
+  color: color-mix(in srgb, var(--color-ink) 70%, var(--color-muted));
+  background: rgba(255, 250, 246, 0.64);
+}
+
+.calendar-event-shell:not(.calendar-event-shell-completed):not(.calendar-event-shell-in-progress):not(.calendar-event-shell-cancelled) .calendar-event-time {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.calendar-event-shell:not(.calendar-event-shell-completed):not(.calendar-event-shell-in-progress):not(.calendar-event-shell-cancelled) .calendar-event-title {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 600;
+}
+
+.calendar-event-shell:not(.calendar-event-shell-completed):not(.calendar-event-shell-in-progress):not(.calendar-event-shell-cancelled) .calendar-event-instructor-chip,
+.calendar-event-shell:not(.calendar-event-shell-completed):not(.calendar-event-shell-in-progress):not(.calendar-event-shell-cancelled) .calendar-event-pill-neutral {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.calendar-event-shell-in-progress .calendar-event-time {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.calendar-event-shell-in-progress .calendar-event-title {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 600;
+}
+
+.calendar-event-shell-in-progress .calendar-event-customer-summary {
+  color: #ffffff;
+}
+
+.calendar-event-shell-in-progress .calendar-event-instructor-chip,
+.calendar-event-shell-in-progress .calendar-event-pill-neutral {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .calendar-event-topline {
@@ -852,6 +920,14 @@ input.field-input[type="time"]:not(:disabled):not([readonly]) {
 
 .calendar-event-customer-summary {
   @apply truncate text-[0.8rem] font-semibold leading-[1.02] text-ink;
+}
+
+.calendar-event-shell:not(.calendar-event-shell-completed):not(.calendar-event-shell-cancelled) .calendar-event-customer-summary {
+  color: #ffffff;
+}
+
+.calendar-event-shell:not(.calendar-event-shell-completed):not(.calendar-event-shell-cancelled) .calendar-event-customer-empty {
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .calendar-event-customer-empty {
