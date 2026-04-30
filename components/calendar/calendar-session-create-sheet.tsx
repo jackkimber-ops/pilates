@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { createCalendarSessionAction } from "@/app/(app)/actions";
 import { SessionForm } from "@/app/(app)/sessions/session-form";
@@ -62,7 +61,6 @@ export function CalendarSessionCreateSheet({
   onClose: () => void;
   onCreated: (sessionId: string) => void;
 }) {
-  const router = useRouter();
   const [options, setOptions] = useState<SessionCreateOptionsPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -226,7 +224,6 @@ export function CalendarSessionCreateSheet({
 
                 onCreated(state.entityId);
                 setOptions(null);
-                router.refresh();
               }}
             />
           </div>

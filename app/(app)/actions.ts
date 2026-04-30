@@ -1086,7 +1086,12 @@ export async function createBookingAction(
     revalidateCorePaths();
     revalidatePath(`/sessions/${booking.sessionId}`);
     revalidatePath(`/customers/${booking.customerId}`);
-    redirect(getRedirectTo(formData, `/sessions/${booking.sessionId}`));
+
+    return {
+      ok: true,
+      message: "Booking added.",
+      entityId: booking.id,
+    };
   } catch (error) {
     return actionError(error);
   }

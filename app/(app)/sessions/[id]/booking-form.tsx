@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { PAYMENT_SOURCE_OPTIONS } from "@/lib/constants";
 import { FormMessage } from "@/components/forms/form-message";
 import { Field } from "@/components/forms/field";
@@ -37,6 +38,9 @@ export function BookingForm({
   packageBalanceOptions,
   trialPurchaseOptions,
 }: BookingFormProps) {
+  const router = useRouter();
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const lastSuccessRef = useRef<string | null>(null);
   const [state, action] = useActionState(createBookingAction, INITIAL_FORM_STATE);
   const [paymentSourceType, setPaymentSourceType] = useState<"PACKAGE" | "SINGLE" | "TRIAL" | "OVERRIDE">("PACKAGE");
   const [customerId, setCustomerId] = useState("");
@@ -87,8 +91,20 @@ export function BookingForm({
   const packageSelectionBlocked =
     paymentSourceType === "PACKAGE" && customerId !== "" && filteredPackageBalanceOptions.length === 0;
 
+  useEffect(() => {
+    if (!state.ok || !state.entityId || lastSuccessRef.current === state.entityId) {
+      return;
+    }
+
+    lastSuccessRef.current = state.entityId;
+    formRef.current?.reset();
+    setCustomerId("");
+    setPaymentSourceType("PACKAGE");
+    router.refresh();
+  }, [router, state]);
+
   return (
-    <form action={action} className="space-y-6">
+    <form ref={formRef} action={action} className="space-y-6">
       <input type="hidden" name="sessionId" value={sessionId} />
       <input type="hidden" name="redirectTo" value={redirectTo} />
 

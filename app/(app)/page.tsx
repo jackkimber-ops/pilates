@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { addDays } from "date-fns";
 import { ArrowRight, CalendarDays, CircleDollarSign, Clock3, Plus, Settings2, Sparkles, Users2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -8,13 +7,14 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getCustomerBalanceLabel, getCustomerBalanceSourceLabel } from "@/lib/balances";
 import { LOW_CREDIT_THRESHOLD } from "@/lib/constants";
-import { getToday, toDateTimeLabel, toRelativeDayLabel } from "@/lib/date";
+import { getNow, getToday, getTodayRangeInAppTimezone, toDateTimeLabel, toRelativeDayLabel } from "@/lib/date";
 import { prisma } from "@/lib/prisma";
 import { compactList, formatCurrency } from "@/lib/utils";
 
 export default async function DashboardPage() {
+  const now = getNow();
   const today = getToday();
-  const tomorrow = addDays(today, 1);
+  const { end: tomorrow } = getTodayRangeInAppTimezone(now);
 
   const [todaysSessions, upcomingSessions, lowBalancePackages, expiredPackages, unusedSingles] =
     await Promise.all([
@@ -22,7 +22,7 @@ export default async function DashboardPage() {
         where: {
           status: "SCHEDULED",
           startsAt: {
-            gte: today,
+            gte: now,
             lt: tomorrow,
           },
         },
@@ -64,7 +64,7 @@ export default async function DashboardPage() {
         where: {
           status: "SCHEDULED",
           startsAt: {
-            gte: today,
+            gte: now,
           },
         },
         select: {

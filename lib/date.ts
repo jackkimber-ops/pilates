@@ -61,6 +61,15 @@ export function getToday() {
   return toDateOnly(getNow());
 }
 
+export function getTodayRangeInAppTimezone(now = getNow()) {
+  const start = combineDateAndTime(toDateInputValue(now), "00:00");
+
+  return {
+    start,
+    end: addDays(start, 1),
+  };
+}
+
 export function getReportRangeEnd() {
   return endOfDay(getNow());
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { DayHeaderContentArg, EventContentArg } from "@fullcalendar/core";
 import FullCalendar from "@fullcalendar/react";
@@ -137,6 +137,7 @@ export function CalendarBoard() {
   const [error, setError] = useState<string | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [createSlot, setCreateSlot] = useState<{ date: string; time: string } | null>(null);
+  const [, startRefreshTransition] = useTransition();
 
   const applyView = (nextView: CalendarView) => {
     setView(nextView);
@@ -145,9 +146,15 @@ export function CalendarBoard() {
     });
   };
 
-  const refreshCalendarEvents = () => {
+  const refreshCalendarEvents = (options: { refreshPage?: boolean } = {}) => {
+    const shouldRefreshPage = options.refreshPage ?? true;
     calendarRef.current?.getApi().refetchEvents();
-    router.refresh();
+
+    if (shouldRefreshPage) {
+      startRefreshTransition(() => {
+        router.refresh();
+      });
+    }
   };
 
   const handleSessionDeleted = (sessionId: string) => {

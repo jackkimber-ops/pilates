@@ -1,24 +1,23 @@
 import Link from "next/link";
-import { addDays } from "date-fns";
 import { Clock3 } from "lucide-react";
 import { CalendarBoard } from "@/components/calendar/calendar-board";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { getToday, toDateTimeLabel } from "@/lib/date";
+import { getNow, getTodayRangeInAppTimezone, toDateTimeLabel } from "@/lib/date";
 import { prisma } from "@/lib/prisma";
 import { compactList } from "@/lib/utils";
 
 export default async function CalendarPage() {
-  const today = getToday();
-  const tomorrow = addDays(today, 1);
+  const now = getNow();
+  const { end: tomorrow } = getTodayRangeInAppTimezone(now);
 
   const [todaySessions, upcomingSessions] = await Promise.all([
     prisma.session.findMany({
       where: {
         status: "SCHEDULED",
           startsAt: {
-            gte: today,
+            gte: now,
             lt: tomorrow,
           },
         },
@@ -56,6 +55,9 @@ export default async function CalendarPage() {
     prisma.session.findMany({
       where: {
         status: "SCHEDULED",
+        startsAt: {
+          gte: now,
+        },
       },
       select: {
         id: true,
