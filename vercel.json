@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/db-keepalive",
+      "schedule": "0 2 * * *"
+    }
+  ]
+}
