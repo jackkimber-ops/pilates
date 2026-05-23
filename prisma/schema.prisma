@@ -258,6 +258,7 @@ model CustomerPackage {
   @@index([customerId, category, active, expiryDate])
   @@index([customerId, remainingCredits])
   @@index([sourceType, createdAt])
+  @@index([sourceType, purchaseDate])
 }
 
 model CustomerTrialPackage {
@@ -277,6 +278,7 @@ model CustomerTrialPackage {
   updatedAt              DateTime                   @updatedAt
 
   @@index([customerId, active, purchaseDate])
+  @@index([purchaseDate])
 }
 
 model CustomerTrialPackageItem {
@@ -309,6 +311,7 @@ model PackageAdjustment {
   transaction       CustomerPackageTransaction?
 
   @@index([customerPackageId, createdAt])
+  @@index([createdAt])
 }
 
 model SingleClassPurchase {
@@ -329,6 +332,7 @@ model SingleClassPurchase {
   updatedAt     DateTime                  @updatedAt
 
   @@index([customerId, category, status, expiryDate])
+  @@index([purchaseDate])
 }
 
 model Session {
@@ -358,6 +362,7 @@ model Session {
 
   @@index([date, startsAt, endsAt])
   @@index([status, startsAt])
+  @@index([startsAt, endsAt])
 }
 
 model Booking {
@@ -394,6 +399,8 @@ model Booking {
   @@unique([sessionId, customerId])
   @@index([sessionId, status])
   @@index([customerId, status])
+  @@index([customerId, createdAt])
+  @@index([status, createdAt])
   @@index([customerTrialPackageItemId, status])
   @@index([reversedByUserId, restoredAt])
 }
@@ -510,4 +517,5 @@ model AuditLog {
   user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([entityType, entityId, createdAt])
+  @@index([action, createdAt])
 }

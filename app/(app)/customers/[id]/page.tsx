@@ -169,6 +169,7 @@ export default async function CustomerDetailPage({
       orderBy: {
         createdAt: "desc",
       },
+      take: 50,
     }),
     prisma.customerTrialPackage.findMany({
       where: {
@@ -237,6 +238,7 @@ export default async function CustomerDetailPage({
       orderBy: {
         createdAt: "desc",
       },
+      take: 50,
     }),
     prisma.singleClassPurchase.findMany({
       where: {
@@ -259,6 +261,7 @@ export default async function CustomerDetailPage({
       orderBy: {
         purchaseDate: "desc",
       },
+      take: 50,
     }),
     prisma.booking.findMany({
       where: {
@@ -338,6 +341,7 @@ export default async function CustomerDetailPage({
       orderBy: {
         createdAt: "desc",
       },
+      take: 50,
     }),
     prisma.recurringBookingRule.findMany({
       where: {

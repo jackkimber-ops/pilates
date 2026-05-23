@@ -138,7 +138,7 @@ export default async function CalendarPage() {
               </div>
 
               {nextSession ? (
-                <Link href={`/sessions/${nextSession.id}`} className="list-row block">
+                <Link href={`/sessions/${nextSession.id}`} prefetch={false} className="list-row block">
                   <div className="space-y-3">
                     <div className="chip-row">
                       <Badge tone={nextSession.classType.category === "GROUP" ? "plum" : "warm"}>
@@ -174,7 +174,7 @@ export default async function CalendarPage() {
 
               <div className="space-y-3">
                 {upcomingSessions.slice(1).map((session) => (
-                  <Link key={session.id} href={`/sessions/${session.id}`} className="list-row-quiet block">
+                  <Link key={session.id} href={`/sessions/${session.id}`} prefetch={false} className="list-row-quiet block">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="chip-row">

@@ -176,7 +176,7 @@ export default async function CustomersPage({
         {customerSummaries.length ? (
           <div className="space-y-3 px-4 pb-4 md:px-5 md:pb-5">
             {customerSummaries.map(({ customer, activePackageCount, totalCredits, unusedSingles }) => (
-              <Link key={customer.id} href={`/customers/${customer.id}`} className="list-row block">
+              <Link key={customer.id} href={`/customers/${customer.id}`} prefetch={false} className="list-row block">
                 <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
                   <div className="space-y-3">
                     <div className="chip-row">

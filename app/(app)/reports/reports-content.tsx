@@ -58,6 +58,7 @@ export async function ReportsContent({
       orderBy: {
         startsAt: "asc",
       },
+      take: 120,
     }),
     prisma.customerPackage.findMany({
       where: {
@@ -92,6 +93,7 @@ export async function ReportsContent({
       orderBy: {
         purchaseDate: "desc",
       },
+      take: 80,
     }),
     prisma.singleClassPurchase.findMany({
       where: {
@@ -120,6 +122,7 @@ export async function ReportsContent({
       orderBy: {
         purchaseDate: "desc",
       },
+      take: 80,
     }),
     prisma.customerTrialPackage.findMany({
       where: {
@@ -146,6 +149,7 @@ export async function ReportsContent({
       orderBy: {
         purchaseDate: "desc",
       },
+      take: 80,
     }),
     prisma.packageAdjustment.findMany({
       where: {
@@ -417,6 +421,7 @@ export async function ReportsContent({
       orderBy: {
         updatedAt: "desc",
       },
+      take: 80,
     }),
   ]);
 

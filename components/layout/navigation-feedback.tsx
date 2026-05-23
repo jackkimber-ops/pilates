@@ -1,21 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { NAVIGATION_START_EVENT } from "@/lib/navigation-feedback";
-
-const DEFAULT_PREFETCH_ROUTES = [
-  "/",
-  "/calendar",
-  "/customers",
-  "/sessions/new",
-  "/sales/package",
-  "/sales/single",
-  "/sales/trial",
-  "/recurring",
-  "/reports",
-  "/catalog",
-] as const;
 
 function isSameDocumentNavigation(url: URL) {
   return (
@@ -50,19 +37,11 @@ function getNavigableAnchorFromTarget(target: EventTarget | null) {
 }
 
 export function NavigationFeedback() {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isNavigating, setIsNavigating] = useState(false);
   const timeoutRef = useRef<number | null>(null);
   const search = searchParams.toString();
-  const prefetchRoutes = useMemo(() => [...DEFAULT_PREFETCH_ROUTES], []);
-
-  useEffect(() => {
-    prefetchRoutes.forEach((route) => {
-      router.prefetch(route);
-    });
-  }, [prefetchRoutes, router]);
 
   useEffect(() => {
     if (timeoutRef.current !== null) {

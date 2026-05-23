@@ -83,6 +83,7 @@ export function PrimaryNav({
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               className={cn(
                 "mobile-nav-link",
                 active ? "mobile-nav-link-active" : undefined,
@@ -117,6 +118,7 @@ export function PrimaryNav({
           <Link
             key={item.href}
             href={item.href}
+            prefetch={false}
             className={cn(
               "sidebar-nav-link",
               active ? "sidebar-nav-link-active" : undefined,

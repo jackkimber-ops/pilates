@@ -70,6 +70,7 @@ export function ShellMenu({
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 role="menuitem"
                 className="shell-menu-link"
                 onClick={() => setOpen(false)}

@@ -5,6 +5,7 @@ import { getSessionCreateOptions } from "@/lib/session-create-options";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();

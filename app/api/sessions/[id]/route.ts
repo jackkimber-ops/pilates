@@ -10,6 +10,8 @@ import { prisma } from "@/lib/prisma";
 import { getEffectiveSessionStatus } from "@/lib/session-status";
 import { compactList } from "@/lib/utils";
 
+export const preferredRegion = "sin1";
+
 type SessionAlertTone = "warning" | "info";
 type SessionBookingPreview = {
   status: "BOOKED" | "ATTENDED" | "CANCELLED" | "LATE_CANCEL" | "NO_SHOW";

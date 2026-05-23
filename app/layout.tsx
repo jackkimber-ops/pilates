@@ -27,6 +27,8 @@ const workSans = Work_Sans({
   variable: "--font-work-sans",
 });
 
+export const preferredRegion = "sin1";
+
 export const metadata: Metadata = {
   title: "Re:Form Admin",
   description: "Premium mobile-first internal operations for the Re:Form Pilates studio.",

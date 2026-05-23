@@ -180,7 +180,7 @@ export default async function DashboardPage() {
               const Icon = item.icon;
 
               return (
-                <Link key={item.href} href={item.href} className="list-row group block h-full">
+                <Link key={item.href} href={item.href} prefetch={false} className="list-row group block h-full">
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-3">
                       <div className="flex size-10 items-center justify-center rounded-[18px] bg-white/72 text-accent-strong shadow-[0_14px_24px_-22px_rgba(74,56,51,0.14)]">
@@ -198,7 +198,7 @@ export default async function DashboardPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Link href="/catalog" className={buttonStyles({ variant: "secondary", size: "sm" })}>
+            <Link href="/catalog" prefetch={false} className={buttonStyles({ variant: "secondary", size: "sm" })}>
               <Settings2 className="size-4" />
               Studio catalog
             </Link>
@@ -249,6 +249,7 @@ export default async function DashboardPage() {
                 <Link
                   key={customerPackage.id}
                   href={`/customers/${customerPackage.customerId}`}
+                  prefetch={false}
                   className="list-row-quiet block"
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -291,6 +292,7 @@ export default async function DashboardPage() {
                 <Link
                   key={customerPackage.id}
                   href={`/customers/${customerPackage.customerId}`}
+                  prefetch={false}
                   className="list-row-quiet block"
                 >
                   <p className="font-semibold text-ink">{customerPackage.customer.fullName}</p>
@@ -313,7 +315,12 @@ export default async function DashboardPage() {
           <div className="space-y-3">
             {unusedSingles.length ? (
               unusedSingles.map((purchase) => (
-                <Link key={purchase.id} href={`/customers/${purchase.customerId}`} className="list-row-quiet block">
+                <Link
+                  key={purchase.id}
+                  href={`/customers/${purchase.customerId}`}
+                  prefetch={false}
+                  className="list-row-quiet block"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-semibold text-ink">{purchase.customer.fullName}</p>

@@ -75,6 +75,7 @@ export function AppShell({
               <div className="surface-inset rounded-[30px] p-4">
                 <Link
                   href="/sales/package"
+                  prefetch={false}
                   className={buttonStyles({
                     variant: "primary",
                     size: "sm",
@@ -121,6 +122,7 @@ export function AppShell({
                 <div className="flex flex-wrap items-center gap-2.5">
                   <Link
                     href="/sessions/new"
+                    prefetch={false}
                     className={buttonStyles({ size: "sm" })}
                   >
                     <Plus className="size-4" />
@@ -128,6 +130,7 @@ export function AppShell({
                   </Link>
                   <Link
                     href="/calendar"
+                    prefetch={false}
                     className={buttonStyles({ variant: "secondary", size: "sm" })}
                   >
                     <CalendarDays className="size-4" />

@@ -7,6 +7,7 @@ import { getEffectiveSessionStatus, getSessionTemporalState } from "@/lib/sessio
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
 
 function normalizeHex(hex: string) {
   const trimmed = hex.replace("#", "").trim();
