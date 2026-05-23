@@ -109,7 +109,7 @@ export default async function CustomersPage({
       <PageHeader
         title="Customers"
         actions={
-          <Link href="/customers/new" className={buttonStyles({ size: "lg" })}>
+          <Link href="/customers/new" prefetch={false} className={buttonStyles({ size: "lg" })}>
             <Plus className="size-4" />
             Add customer
           </Link>
@@ -226,7 +226,7 @@ export default async function CustomersPage({
               title="No customers"
               description="Try another search."
               action={
-                <Link href="/customers/new" className={buttonStyles({ variant: "tonal", size: "sm" })}>
+                <Link href="/customers/new" prefetch={false} className={buttonStyles({ variant: "tonal", size: "sm" })}>
                   Add customer
                 </Link>
               }

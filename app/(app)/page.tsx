@@ -158,7 +158,7 @@ export default async function DashboardPage() {
       <PageHeader
         title="Dashboard"
         actions={
-          <Link href="/sessions/new" className={buttonStyles({ size: "lg" })}>
+          <Link href="/sessions/new" prefetch={false} className={buttonStyles({ size: "lg" })}>
             <Plus className="size-4" />
             New session
           </Link>

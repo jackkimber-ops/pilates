@@ -166,7 +166,7 @@ export function DashboardNextSessionCard() {
       </div>
 
       {nextSession ? (
-        <Link href={`/sessions/${nextSession.id}`} className="list-row block">
+        <Link href={`/sessions/${nextSession.id}`} prefetch={false} className="list-row block">
           <div className="space-y-3">
             <div className="chip-row">
               <Badge tone={nextSession.classType.category === "GROUP" ? "plum" : "warm"}>
@@ -194,7 +194,7 @@ export function DashboardNextSessionCard() {
 
       <div className="space-y-3">
         {data.upcomingSessions.slice(1, 4).map((session) => (
-          <Link key={session.id} href={`/sessions/${session.id}`} className="list-row-quiet block">
+          <Link key={session.id} href={`/sessions/${session.id}`} prefetch={false} className="list-row-quiet block">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="font-semibold text-ink">{session.title}</p>
@@ -214,7 +214,7 @@ export function DashboardNextSessionCard() {
         ))}
       </div>
 
-      <Link href="/calendar" className={buttonStyles({ variant: "secondary", size: "sm" })}>
+      <Link href="/calendar" prefetch={false} className={buttonStyles({ variant: "secondary", size: "sm" })}>
         Calendar
       </Link>
     </Card>
@@ -233,7 +233,7 @@ export function DashboardTodaySessionsCard() {
       <div className="space-y-3" aria-live="polite">
         {data.todaySessions.length ? (
           data.todaySessions.map((session) => (
-            <Link key={session.id} href={`/sessions/${session.id}`} className="list-row block">
+            <Link key={session.id} href={`/sessions/${session.id}`} prefetch={false} className="list-row block">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div className="space-y-3">
                   <div className="chip-row">
@@ -272,7 +272,7 @@ export function DashboardTodaySessionsCard() {
             title="No sessions today"
             description="Create a session."
             action={
-              <Link href="/sessions/new" className={buttonStyles({ variant: "tonal", size: "sm" })}>
+              <Link href="/sessions/new" prefetch={false} className={buttonStyles({ variant: "tonal", size: "sm" })}>
                 Create session
               </Link>
             }
