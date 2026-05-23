@@ -14,7 +14,7 @@ export async function getSessionCreateOptions(input: {
   balanceValidFrom: Date;
   user?: SessionCreateUser | null;
 }) {
-  const [classTypes, instructors, customers, customerPackageGroups] = await Promise.all([
+  const [classTypes, instructors, customers, customerPackageGroups, trialItems] = await Promise.all([
     prisma.classType.findMany({
       where: {
         active: true,
@@ -72,6 +72,54 @@ export async function getSessionCreateOptions(input: {
         },
       },
     }),
+    prisma.customerTrialPackageItem.findMany({
+      where: {
+        remainingQuantity: {
+          gt: 0,
+        },
+        customerTrialPackage: {
+          active: true,
+          customer: {
+            status: "ACTIVE",
+          },
+        },
+      },
+      select: {
+        id: true,
+        classTypeId: true,
+        originalQuantity: true,
+        remainingQuantity: true,
+        classType: {
+          select: {
+            name: true,
+          },
+        },
+        customerTrialPackage: {
+          select: {
+            customerId: true,
+            purchaseDate: true,
+            trialPackageTemplate: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        bookings: {
+          where: {
+            status: {
+              not: "CANCELLED",
+            },
+          },
+          select: {
+            trialUseConsumed: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+    }),
   ]);
 
   const classTypeNames = new Map(classTypes.map((classType) => [classType.id, classType.name]));
@@ -116,6 +164,35 @@ export async function getSessionCreateOptions(input: {
       .values(),
   );
 
+  const trialAvailability = trialItems
+    .map((item) => {
+      const reservedQuantity = item.bookings.filter((booking) => !booking.trialUseConsumed).length;
+      const availableQuantity = item.remainingQuantity - reservedQuantity;
+
+      return {
+        customerId: item.customerTrialPackage.customerId,
+        classTypeId: item.classTypeId,
+        customerTrialPackageItemId: item.id,
+        templateName: item.customerTrialPackage.trialPackageTemplate.name,
+        classTypeName: item.classType.name,
+        originalQuantity: item.originalQuantity,
+        remainingQuantity: item.remainingQuantity,
+        availableQuantity,
+      };
+    })
+    .filter((item) => item.availableQuantity > 0)
+    .sort((left, right) => {
+      if (left.customerId !== right.customerId) {
+        return left.customerId.localeCompare(right.customerId);
+      }
+
+      if (left.classTypeName !== right.classTypeName) {
+        return left.classTypeName.localeCompare(right.classTypeName);
+      }
+
+      return left.templateName.localeCompare(right.templateName);
+    });
+
   const defaultInstructor =
     (input.user?.instructorId
       ? instructors.find((instructor) => instructor.id === input.user?.instructorId)
@@ -132,6 +209,7 @@ export async function getSessionCreateOptions(input: {
     instructors,
     customers,
     packageAvailability,
+    trialAvailability,
     defaultInstructorId: defaultInstructor?.id ?? "",
   };
 }

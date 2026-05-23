@@ -49,8 +49,10 @@ export function NavigationFeedback() {
       timeoutRef.current = null;
     }
 
-    setIsNavigating(false);
-    document.documentElement.removeAttribute("data-nav-loading");
+    queueMicrotask(() => {
+      setIsNavigating(false);
+      document.documentElement.removeAttribute("data-nav-loading");
+    });
   }, [pathname, search]);
 
   useEffect(() => {

@@ -379,6 +379,7 @@ export function CalendarBoard() {
         sessionId={selectedSessionId}
         onClose={() => setSelectedSessionId(null)}
         onDeleted={handleSessionDeleted}
+        onBookingRemoved={() => refreshCalendarEvents()}
       />
       <CalendarSessionCreateSheet
         slot={createSlot}

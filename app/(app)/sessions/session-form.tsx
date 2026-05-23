@@ -89,6 +89,16 @@ type SessionFormProps = {
     nextPackageRemainingCredits: number;
     sourceType: "PACKAGE_SALE" | "IMPORTED";
   }>;
+  trialAvailability?: Array<{
+    customerId: string;
+    classTypeId: string;
+    customerTrialPackageItemId: string;
+    templateName: string;
+    classTypeName: string;
+    originalQuantity: number;
+    remainingQuantity: number;
+    availableQuantity: number;
+  }>;
   initialValues?: {
     id?: string;
     classTypeId?: string;
@@ -116,6 +126,7 @@ export function SessionForm({
   instructors,
   customers = [],
   packageAvailability = [],
+  trialAvailability = [],
   initialValues,
   action: actionProp = saveSessionAction,
   layout = "standard",
@@ -148,22 +159,39 @@ export function SessionForm({
       ),
     [packageAvailability],
   );
+  const trialAvailabilityByKey = useMemo(() => {
+    const map = new Map<string, typeof trialAvailability>();
+
+    for (const entry of trialAvailability) {
+      const key = `${entry.customerId}:${entry.classTypeId}`;
+      const existing = map.get(key);
+
+      if (existing) {
+        existing.push(entry);
+      } else {
+        map.set(key, [entry]);
+      }
+    }
+
+    return map;
+  }, [trialAvailability]);
   const selectedCustomers = useMemo(
     () => selectedCustomerIds
       .map((customerId) => customers.find((customer) => customer.id === customerId))
       .filter((customer): customer is { id: string; fullName: string } => Boolean(customer)),
     [customers, selectedCustomerIds],
   );
-  const selectedPackageAvailabilities = useMemo(
+  const selectedEntitlements = useMemo(
     () =>
       selectedCustomerIds.map((customerId) => ({
         customerId,
-        availability: packageAvailabilityByKey.get(`${customerId}:${selectedClassTypeId}`) ?? null,
+        packageAvailability: packageAvailabilityByKey.get(`${customerId}:${selectedClassTypeId}`) ?? null,
+        trialAvailability: trialAvailabilityByKey.get(`${customerId}:${selectedClassTypeId}`)?.[0] ?? null,
       })),
-    [packageAvailabilityByKey, selectedCustomerIds, selectedClassTypeId],
+    [packageAvailabilityByKey, trialAvailabilityByKey, selectedCustomerIds, selectedClassTypeId],
   );
-  const missingPackageCustomerIds = selectedPackageAvailabilities
-    .filter((entry) => !entry.availability)
+  const missingBalanceCustomerIds = selectedEntitlements
+    .filter((entry) => !entry.packageAvailability && !entry.trialAvailability)
     .map((entry) => entry.customerId);
   const customersToAdd = customers.filter((customer) => !selectedCustomerIds.includes(customer.id));
   const normalizedStartTime = useMemo(
@@ -176,7 +204,7 @@ export function SessionForm({
   );
   const isCreateMode = !initialValues?.id;
   const overCapacity = isCreateMode && selectedCustomerIds.length > capacity;
-  const missingPackage = isCreateMode && selectedCustomerIds.length > 0 && missingPackageCustomerIds.length > 0;
+  const missingBalance = isCreateMode && selectedCustomerIds.length > 0 && missingBalanceCustomerIds.length > 0;
   const missingCustomers = isCreateMode && selectedCustomerIds.length === 0;
   const lastSuccessRef = useRef<string | null>(null);
   const isQuickLayout = layout === "quick";
@@ -283,21 +311,21 @@ export function SessionForm({
               <p className="section-kicker">{isQuickLayout ? "Balances" : "Package check"}</p>
               <h3 className="font-display text-[1.3rem] leading-none tracking-[-0.04em] text-ink">
                 {selectedCustomerIds.length
-                  ? missingPackage
+                  ? missingBalance
                     ? "Missing balance"
                     : "Balances available"
                   : "Select customers"}
               </h3>
             </div>
-            <Badge tone={selectedCustomerIds.length && !missingPackage && !overCapacity ? "sage" : "warm"}>
+            <Badge tone={selectedCustomerIds.length && !missingBalance && !overCapacity ? "sage" : "warm"}>
               {selectedCustomerIds.length}/{capacity}
             </Badge>
           </div>
 
           <div className="mt-3 text-sm leading-6 text-muted">
-            {selectedPackageAvailabilities.length ? (
+            {selectedEntitlements.length ? (
               <div className="space-y-2">
-                {selectedPackageAvailabilities.map(({ customerId, availability }) => {
+                {selectedEntitlements.map(({ customerId, packageAvailability: availability, trialAvailability: trial }) => {
                   const customer = customers.find((item) => item.id === customerId);
 
                   return (
@@ -309,6 +337,18 @@ export function SessionForm({
                           {formatNumber(availability.totalRemainingCredits)} remaining
                           {" / "}
                           {availability.sourceType === "IMPORTED" ? "Imported" : availability.nextPackageName}
+                          {trial ? (
+                            <span className="text-muted">
+                              {" "}
+                              / Trial available
+                            </span>
+                          ) : null}
+                        </>
+                      ) : trial ? (
+                        <>
+                          Trial: {trial.classTypeName} / {formatNumber(trial.availableQuantity)} remaining
+                          {" / "}
+                          {trial.templateName}
                         </>
                       ) : (
                         <span className="text-danger">No matching balance</span>
@@ -444,7 +484,7 @@ export function SessionForm({
               className="w-full md:w-auto"
               size={isQuickLayout ? "md" : "lg"}
               pendingLabel={pendingLabel ?? (initialValues?.id ? "Saving..." : "Creating...")}
-              disabled={missingCustomers || missingPackage || overCapacity}
+              disabled={missingCustomers || missingBalance || overCapacity}
             >
               {submitLabel ?? (initialValues?.id ? "Save session" : "Create session")}
             </SubmitButton>

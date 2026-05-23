@@ -98,9 +98,11 @@ export function BookingForm({
 
     lastSuccessRef.current = state.entityId;
     formRef.current?.reset();
-    setCustomerId("");
-    setPaymentSourceType("PACKAGE");
-    router.refresh();
+    queueMicrotask(() => {
+      setCustomerId("");
+      setPaymentSourceType("PACKAGE");
+      router.refresh();
+    });
   }, [router, state]);
 
   return (

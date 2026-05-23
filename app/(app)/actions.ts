@@ -16,8 +16,8 @@ import { calculateExpiryDate, combineDateAndTime } from "@/lib/date";
 import { recordCustomerPackageTransaction, recordCustomerTrialItemTransaction } from "@/lib/entitlement-ledger";
 import {
   adjustPackageCredits,
-  cancelBooking,
   createBooking,
+  removeBooking,
   reverseBookingUsage,
   updateBookingStatus,
 } from "@/lib/domain/bookings";
@@ -153,35 +153,96 @@ async function createSessionWithInitialBookings(input: {
     throw new Error("Customer count exceeds session capacity.");
   }
 
-  const availableBalances = await prisma.customerPackage.findMany({
-    where: {
-      customerId: {
-        in: customerIds,
-      },
-      classTypeId: input.classTypeId,
-      active: true,
-      remainingCredits: {
-        gt: 0,
-      },
-      OR: [
-        {
-          expiryDate: null,
+  const sessionStartsAt = combineDateAndTime(input.date, input.startTime);
+  const [availableBalances, availableTrialItems] = await Promise.all([
+    prisma.customerPackage.findMany({
+      where: {
+        customerId: {
+          in: customerIds,
         },
-        {
-          expiryDate: {
-            gte: combineDateAndTime(input.date, input.startTime),
+        classTypeId: input.classTypeId,
+        active: true,
+        remainingCredits: {
+          gt: 0,
+        },
+        OR: [
+          {
+            expiryDate: null,
+          },
+          {
+            expiryDate: {
+              gte: sessionStartsAt,
+            },
+          },
+        ],
+      },
+      select: {
+        customerId: true,
+      },
+    }),
+    prisma.customerTrialPackageItem.findMany({
+      where: {
+        classTypeId: input.classTypeId,
+        remainingQuantity: {
+          gt: 0,
+        },
+        customerTrialPackage: {
+          customerId: {
+            in: customerIds,
+          },
+          active: true,
+        },
+      },
+      select: {
+        id: true,
+        remainingQuantity: true,
+        createdAt: true,
+        customerTrialPackage: {
+          select: {
+            customerId: true,
+            purchaseDate: true,
+            createdAt: true,
           },
         },
+        bookings: {
+          where: {
+            status: {
+              not: "CANCELLED",
+            },
+          },
+          select: {
+            trialUseConsumed: true,
+          },
+        },
+      },
+      orderBy: [
+        {
+          customerTrialPackage: {
+            purchaseDate: "asc",
+          },
+        },
+        {
+          createdAt: "asc",
+        },
       ],
-    },
-    select: {
-      customerId: true,
-    },
-  });
+    }),
+  ]);
 
   const customersWithBalance = new Set(availableBalances.map((balance) => balance.customerId));
-  if (customerIds.some((customerId) => !customersWithBalance.has(customerId))) {
-    throw new Error("Matching balance required.");
+  const trialItemByCustomerId = new Map<string, { id: string }>();
+
+  for (const trialItem of availableTrialItems) {
+    const reservedQuantity = trialItem.bookings.filter((booking) => !booking.trialUseConsumed).length;
+    const availableQuantity = trialItem.remainingQuantity - reservedQuantity;
+    const customerId = trialItem.customerTrialPackage.customerId;
+
+    if (availableQuantity > 0 && !trialItemByCustomerId.has(customerId)) {
+      trialItemByCustomerId.set(customerId, { id: trialItem.id });
+    }
+  }
+
+  if (customerIds.some((customerId) => !customersWithBalance.has(customerId) && !trialItemByCustomerId.has(customerId))) {
+    throw new Error("Matching balance or trial entitlement required.");
   }
 
   const session = await createSession({
@@ -198,10 +259,14 @@ async function createSessionWithInitialBookings(input: {
 
   try {
     for (const customerId of customerIds) {
+      const trialItem = trialItemByCustomerId.get(customerId);
+      const usePackage = customersWithBalance.has(customerId);
+
       await createBooking({
         sessionId: session.id,
         customerId,
-        paymentSourceType: "PACKAGE",
+        paymentSourceType: usePackage ? "PACKAGE" : "TRIAL",
+        customerTrialPackageItemId: usePackage ? undefined : trialItem?.id,
         userId: input.userId,
       });
     }
@@ -877,13 +942,14 @@ export async function saveSessionAction(
         if (
           bookingError instanceof Error &&
           (bookingError.message === "Matching balance required." ||
+            bookingError.message === "Matching balance or trial entitlement required." ||
             bookingError.message === "No valid package for this class.")
         ) {
           return {
             ok: false,
-            message: "No active balance for this class.",
+            message: "No active balance or trial for this class.",
             fieldErrors: {
-              customerIds: ["Matching balance required."],
+              customerIds: ["Matching balance or trial entitlement required."],
             },
           };
         }
@@ -990,13 +1056,15 @@ export async function createCalendarSessionAction(
   } catch (error) {
     if (
       error instanceof Error &&
-      (error.message === "Matching balance required." || error.message === "No valid package for this class.")
+      (error.message === "Matching balance required." ||
+        error.message === "Matching balance or trial entitlement required." ||
+        error.message === "No valid package for this class.")
     ) {
       return {
         ok: false,
-        message: "No active balance for this class.",
+        message: "No active balance or trial for this class.",
         fieldErrors: {
-          customerIds: ["Matching balance required."],
+          customerIds: ["Matching balance or trial entitlement required."],
         },
       };
     }
@@ -1133,7 +1201,7 @@ export async function cancelBookingAction(formData: FormData) {
     throw new Error("Booking id is required.");
   }
 
-  const booking = await cancelBooking({
+  const booking = await removeBooking({
     bookingId,
     userId: user.id,
   });

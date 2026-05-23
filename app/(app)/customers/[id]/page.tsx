@@ -525,13 +525,26 @@ export default async function CustomerDetailPage({
       sum + trialPackage.items.reduce((trialSum, item) => trialSum + item.remainingQuantity, 0),
     0,
   );
+  const trialEntitlements = customer.trialPackages.flatMap((trialPackage) =>
+    trialPackage.items.map((item) => ({
+      id: item.id,
+      packageName: trialPackage.trialPackageTemplate.name,
+      purchaseDate: trialPackage.purchaseDate,
+      active: trialPackage.active,
+      classTypeName: item.classType.name,
+      originalQuantity: item.originalQuantity,
+      remainingQuantity: item.remainingQuantity,
+      usedQuantity: item.originalQuantity - item.remainingQuantity,
+    })),
+  );
   const attendedCount = customer.bookings.filter((booking) => booking.status === "ATTENDED").length;
   const nextBooking =
     [...customer.bookings]
       .filter((booking) => booking.status === "BOOKED" && booking.session.status !== "CANCELLED")
       .sort((a, b) => a.session.startsAt.getTime() - b.session.startsAt.getTime())[0] ?? null;
   const latestPayment = paymentHistory[0] ?? null;
-  const packageCountLabel = `${customer.packages.length} balance${customer.packages.length === 1 ? "" : "s"}`;
+  const balanceSourceCount = customer.packages.length + trialEntitlements.length;
+  const packageCountLabel = `${balanceSourceCount} source${balanceSourceCount === 1 ? "" : "s"}`;
   const importedCountLabel = `${importedBalanceCount} imported`;
   const oneOffCountLabel = `${customer.singleClassPurchases.length} one-off${customer.singleClassPurchases.length === 1 ? "" : "s"}`;
   const trialCountLabel = `${customer.trialPackages.length} trial${customer.trialPackages.length === 1 ? "" : "s"}`;
@@ -918,7 +931,7 @@ export default async function CustomerDetailPage({
                   </div>
                 </div>
               ))
-            ) : (
+            ) : !trialEntitlements.length ? (
               <EmptyState
                 title="No balances yet"
                 action={
@@ -930,7 +943,56 @@ export default async function CustomerDetailPage({
                   </Link>
                 }
               />
-            )}
+            ) : null}
+
+            {trialEntitlements.length ? (
+              <div className="list-row space-y-4">
+                <div className="section-header">
+                  <div className="space-y-1.5">
+                    <p className="section-kicker">Trial</p>
+                    <h3 className="font-display text-[1.45rem] leading-none tracking-[-0.04em] text-ink">
+                      Trial entitlements
+                    </h3>
+                  </div>
+                  <Badge tone="plum">{remainingTrialEntitlements} left</Badge>
+                </div>
+
+                <div className="grid gap-3">
+                  {trialEntitlements.map((entitlement) => (
+                    <div key={entitlement.id} className="surface-inset rounded-[22px] p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="chip-row">
+                            <Badge tone={entitlement.active ? "plum" : "neutral"}>
+                              {entitlement.active ? "ACTIVE" : "INACTIVE"}
+                            </Badge>
+                            <Badge tone="outline">Trial</Badge>
+                          </div>
+                          <p className="mt-3 font-semibold text-ink">{entitlement.classTypeName}</p>
+                          <p className="mt-1 text-sm leading-6 text-muted">
+                            {compactList([
+                              entitlement.packageName,
+                              `Purchased ${toShortDate(entitlement.purchaseDate)}`,
+                            ])}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-display text-2xl leading-none tracking-[-0.04em] text-ink">
+                            {entitlement.remainingQuantity}
+                          </p>
+                          <p className="mt-1 text-xs uppercase tracking-[0.16em] text-muted">
+                            of {entitlement.originalQuantity} left
+                          </p>
+                        </div>
+                      </div>
+                      <p className="mt-3 text-sm leading-6 text-muted">
+                        Used {entitlement.usedQuantity}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         </Card>
 

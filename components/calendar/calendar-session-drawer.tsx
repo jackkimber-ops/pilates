@@ -14,7 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { buttonStyles } from "@/components/ui/button";
 import { formatSessionWindow } from "@/lib/date";
-import { cn } from "@/lib/utils";
+import { cn, compactList } from "@/lib/utils";
 
 type DrawerSessionDetail = {
   id: string;
@@ -83,19 +83,49 @@ function getPaymentSourceTone(type: DrawerSessionDetail["bookings"][number]["pay
   return "neutral";
 }
 
+function removeBookingFromDetail(
+  detail: DrawerSessionDetail,
+  bookingId: string,
+): DrawerSessionDetail {
+  const bookings = detail.bookings.filter((booking) => booking.id !== bookingId);
+  const activeBookings = bookings.filter((booking) => booking.status !== "CANCELLED");
+  const activeBookingCount = activeBookings.length;
+
+  return {
+    ...detail,
+    summary: compactList([
+      formatSessionWindow(new Date(detail.startsAt), new Date(detail.endsAt)),
+      detail.instructor.fullName,
+      `${activeBookingCount}/${detail.capacity} booked`,
+    ]),
+    counts: {
+      activeBookingCount,
+      attendedBookingCount: bookings.filter((booking) => booking.status === "ATTENDED").length,
+      packageBackedCount: activeBookings.filter((booking) => booking.paymentSourceType === "PACKAGE").length,
+      singleBackedCount: activeBookings.filter((booking) => booking.paymentSourceType === "SINGLE").length,
+      trialBackedCount: activeBookings.filter((booking) => booking.paymentSourceType === "TRIAL").length,
+      overrideCount: activeBookings.filter((booking) => booking.paymentSourceType === "OVERRIDE").length,
+    },
+    bookings,
+  };
+}
+
 export function CalendarSessionDrawer({
   sessionId,
   onClose,
   onDeleted,
+  onBookingRemoved,
 }: {
   sessionId: string | null;
   onClose: () => void;
   onDeleted: (sessionId: string) => void;
+  onBookingRemoved?: (sessionId: string) => void;
 }) {
   const cacheRef = useRef(new Map<string, DrawerSessionDetail>());
   const [detail, setDetail] = useState<DrawerSessionDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [removingBookingId, setRemovingBookingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -176,15 +206,16 @@ export function CalendarSessionDrawer({
   }, [onClose, sessionId]);
 
   const sheetTitle = detail?.title ?? "Session";
-  const startsAt = detail ? new Date(detail.startsAt) : null;
-  const endsAt = detail ? new Date(detail.endsAt) : null;
   const drawerSummary = useMemo(() => {
-    if (!detail || !startsAt || !endsAt) {
+    if (!detail) {
       return null;
     }
 
+    const startsAt = new Date(detail.startsAt);
+    const endsAt = new Date(detail.endsAt);
+
     return formatSessionWindow(startsAt, endsAt);
-  }, [detail, startsAt, endsAt]);
+  }, [detail]);
 
   if (!sessionId) {
     return null;
@@ -222,6 +253,46 @@ export function CalendarSessionDrawer({
       setError(deleteError instanceof Error ? deleteError.message : "Unable to delete session.");
     } finally {
       setIsDeleting(false);
+    }
+  }
+
+  async function handleRemoveBooking(booking: DrawerSessionDetail["bookings"][number]) {
+    if (!detail || removingBookingId) {
+      return;
+    }
+
+    const consumed = booking.creditDeducted || booking.singleUseConsumed || booking.trialUseConsumed;
+    const confirmed = window.confirm(
+      consumed
+        ? `Remove ${booking.customerName}? Used credits will be restored.`
+        : `Remove ${booking.customerName}?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setRemovingBookingId(booking.id);
+      setError(null);
+
+      const response = await fetch(`/api/bookings/${booking.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Unable to remove customer.");
+      }
+
+      const nextDetail = removeBookingFromDetail(detail, booking.id);
+      cacheRef.current.set(detail.id, nextDetail);
+      setDetail(nextDetail);
+      onBookingRemoved?.(detail.id);
+    } catch (removeError) {
+      setError(removeError instanceof Error ? removeError.message : "Unable to remove customer.");
+    } finally {
+      setRemovingBookingId(null);
     }
   }
 
@@ -411,6 +482,17 @@ export function CalendarSessionDrawer({
                             <div className="session-booking-note">
                               <p>{booking.note}</p>
                             </div>
+                          ) : null}
+
+                          {booking.status !== "CANCELLED" ? (
+                            <button
+                              type="button"
+                              className={buttonStyles({ variant: "secondary", size: "sm" })}
+                              onClick={() => handleRemoveBooking(booking)}
+                              disabled={removingBookingId === booking.id}
+                            >
+                              {removingBookingId === booking.id ? "Removing..." : "Remove customer"}
+                            </button>
                           ) : null}
                         </div>
 

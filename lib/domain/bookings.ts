@@ -997,6 +997,65 @@ export async function reverseBookingUsage(input: {
   return result.booking;
 }
 
+export async function removeBooking(input: { bookingId: string; userId?: string }) {
+  const result = await prisma.$transaction(async (tx) => {
+    await lockResource(tx, BOOKING_STATUS_LOCK_NAMESPACE, input.bookingId);
+
+    const booking = await tx.booking.findUnique({
+      where: { id: input.bookingId },
+    });
+
+    if (!booking) {
+      throw new Error("Booking not found.");
+    }
+
+    const restoredSources: PaymentSourceType[] = [];
+
+    if (booking.creditDeducted) {
+      await reversePackageCredit(tx, booking.id, input.userId);
+      restoredSources.push(PaymentSourceType.PACKAGE);
+    }
+
+    if (booking.singleUseConsumed) {
+      await reverseSingleConsumption(tx, booking.id);
+      restoredSources.push(PaymentSourceType.SINGLE);
+    }
+
+    if (booking.trialUseConsumed) {
+      await reverseTrialConsumption(tx, booking.id, input.userId);
+      restoredSources.push(PaymentSourceType.TRIAL);
+    }
+
+    await tx.booking.delete({
+      where: { id: booking.id },
+    });
+
+    return {
+      booking,
+      restoredSources,
+    };
+  },
+  {
+    maxWait: BOOKING_TX_MAX_WAIT_MS,
+    timeout: BOOKING_TX_TIMEOUT_MS,
+  });
+
+  await logAudit({
+    userId: input.userId,
+    entityType: "Booking",
+    entityId: result.booking.id,
+    action: "REMOVE_BOOKING",
+    details: {
+      sessionId: result.booking.sessionId,
+      customerId: result.booking.customerId,
+      paymentSourceType: result.booking.paymentSourceType,
+      restoredSources: result.restoredSources,
+    },
+  });
+
+  return result.booking;
+}
+
 export async function updateBookingStatus(input: {
   bookingId: string;
   status: BookingStatus;

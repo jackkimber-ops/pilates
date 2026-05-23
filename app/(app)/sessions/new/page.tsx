@@ -17,7 +17,7 @@ export default async function NewSessionPage({
   const user = await getCurrentUser();
   const initialDate = params.date ?? toDateInputValue(today);
   const initialTime = params.time ?? "08:00";
-  const { classTypes, instructors, customers, packageAvailability, defaultInstructorId } =
+  const { classTypes, instructors, customers, packageAvailability, trialAvailability, defaultInstructorId } =
     await getSessionCreateOptions({
       balanceValidFrom: combineDateAndTime(initialDate, initialTime),
       user,
@@ -40,7 +40,7 @@ export default async function NewSessionPage({
                   <p className="font-semibold text-ink">No overlapping sessions</p>
                 </div>
                 <div className="list-row-quiet">
-                  <p className="font-semibold text-ink">Matching balance required</p>
+                  <p className="font-semibold text-ink">Balance or trial required</p>
                 </div>
               </div>
             </Card>
@@ -58,6 +58,7 @@ export default async function NewSessionPage({
                 fullName: customer.fullName,
               }))}
               packageAvailability={packageAvailability}
+              trialAvailability={trialAvailability}
               initialValues={{
                 date: initialDate,
                 startTime: initialTime,

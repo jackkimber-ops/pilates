@@ -35,6 +35,16 @@ type SessionCreateOptionsPayload = {
     nextPackageRemainingCredits: number;
     sourceType: "PACKAGE_SALE" | "IMPORTED";
   }>;
+  trialAvailability: Array<{
+    customerId: string;
+    classTypeId: string;
+    customerTrialPackageItemId: string;
+    templateName: string;
+    classTypeName: string;
+    originalQuantity: number;
+    remainingQuantity: number;
+    availableQuantity: number;
+  }>;
   defaultInstructorId: string;
 };
 
@@ -200,6 +210,7 @@ export function CalendarSessionCreateSheet({
               instructors={options.instructors}
               customers={options.customers}
               packageAvailability={options.packageAvailability}
+              trialAvailability={options.trialAvailability}
               initialValues={{
                 date: slot.date,
                 startTime: slot.time,
