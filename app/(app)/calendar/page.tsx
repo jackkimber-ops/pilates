@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { Clock3 } from "lucide-react";
+import { Clock3, Plus } from "lucide-react";
 import { CalendarBoard } from "@/components/calendar/calendar-board";
+import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
+import { buttonStyles } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getNow, getTodayRangeInAppTimezone, toDateTimeLabel } from "@/lib/date";
@@ -100,6 +102,16 @@ export default async function CalendarPage() {
 
   return (
     <div className="page-stack">
+      <PageHeader
+        title="Calendar"
+        actions={
+          <Link href="/sessions/new" prefetch={false} className={buttonStyles({ size: "lg" })}>
+            <Plus className="size-4" />
+            New session
+          </Link>
+        }
+      />
+
       <section className="mock-stage calendar-stage">
         <div className="relative z-10 grid gap-5 2xl:grid-cols-[minmax(0,1fr)_288px]">
           <CalendarBoard />

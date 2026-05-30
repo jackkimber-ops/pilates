@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
-  CalendarClock,
   CircleDollarSign,
   Mail,
   Phone,
@@ -713,48 +712,6 @@ export default async function CustomerDetailPage({
             <div className="stat-shell">
               <p className="stat-label">Trial sessions</p>
               <p className="metric-number mt-3">{remainingTrialEntitlements}</p>
-            </div>
-
-            <div className="surface-inset rounded-[24px] p-4 sm:col-span-2">
-              <div className="section-header">
-                <div className="space-y-2">
-                  <p className="section-kicker">Actions</p>
-                  <h3 className="font-display text-[1.4rem] leading-none tracking-[-0.04em] text-ink">Actions</h3>
-                </div>
-                <CalendarClock className="size-4 text-accent-strong" />
-              </div>
-              <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                <Link
-                  href={`/sales/package?customerId=${customer.id}`}
-                  className={buttonStyles({ variant: "secondary", size: "sm", className: "w-full" })}
-                >
-                  Sell package
-                </Link>
-                <Link
-                  href={`/sales/single?customerId=${customer.id}`}
-                  className={buttonStyles({ variant: "secondary", size: "sm", className: "w-full" })}
-                >
-                  Sell one-off
-                </Link>
-                <Link
-                  href={`/sales/imported-balance?customerId=${customer.id}`}
-                  className={buttonStyles({ variant: "secondary", size: "sm", className: "w-full" })}
-                >
-                  Add balance
-                </Link>
-                <Link
-                  href={`/sales/trial?customerId=${customer.id}`}
-                  className={buttonStyles({ variant: "secondary", size: "sm", className: "w-full" })}
-                >
-                  Sell trial
-                </Link>
-                <Link
-                  href={`/recurring?customerId=${customer.id}`}
-                  className={buttonStyles({ size: "sm", className: "w-full" })}
-                >
-                  Recurring
-                </Link>
-              </div>
             </div>
           </div>
         </div>

@@ -214,9 +214,6 @@ export function DashboardNextSessionCard() {
         ))}
       </div>
 
-      <Link href="/calendar" prefetch={false} className={buttonStyles({ variant: "secondary", size: "sm" })}>
-        Calendar
-      </Link>
     </Card>
   );
 }

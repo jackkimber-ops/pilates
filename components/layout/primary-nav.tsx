@@ -18,10 +18,10 @@ import { ShellMenu } from "@/components/layout/shell-menu";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", shortLabel: "Home", icon: Layers3 },
-  { href: "/customers", label: "Customers", shortLabel: "Customers", icon: Users2 },
   { href: "/calendar", label: "Calendar", shortLabel: "Calendar", icon: CalendarDays },
+  { href: "/customers", label: "Customers", shortLabel: "Customers", icon: Users2 },
   { href: "/sales/package", label: "Packages", shortLabel: "Packages", icon: CircleDollarSign },
-  { href: "/sales/single", label: "One-offs", shortLabel: "One-offs", icon: TicketPlus },
+  { href: "/sales/trial", label: "Trials", shortLabel: "Trials", icon: TicketPlus },
   { href: "/recurring", label: "Recurring", shortLabel: "Recurring", icon: Repeat2 },
   { href: "/reports", label: "Reports", shortLabel: "Reports", icon: BarChart3 },
   { href: "/catalog", label: "Catalog", shortLabel: "Catalog", icon: Package2 },
@@ -40,10 +40,6 @@ const MOBILE_MENU_ITEMS = [
     label: "Trials",
   },
   {
-    href: "/sales/single",
-    label: "One-offs",
-  },
-  {
     href: "/recurring",
     label: "Recurring",
   },
@@ -58,6 +54,10 @@ const MOBILE_MENU_ITEMS = [
   {
     href: "/sessions/new",
     label: "New session",
+  },
+  {
+    href: "/sales/single",
+    label: "One-offs",
   },
 ] as const;
 

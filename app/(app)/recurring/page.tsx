@@ -1,5 +1,8 @@
 import { addDays } from "date-fns";
+import Link from "next/link";
+import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { Badge } from "@/components/ui/badge";
 import { buttonStyles } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -59,43 +62,45 @@ export default async function RecurringPage({
         classType: true,
         instructor: true,
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: [{ active: "desc" }, { dayOfWeek: "asc" }, { startTime: "asc" }],
     }),
   ]);
 
   const today = getToday();
+  const activeRuleCount = rules.filter((rule) => rule.active).length;
 
   return (
     <div className="space-y-8">
-      <PageHeader title="Recurring" />
+      <PageHeader
+        title="Recurring"
+        actions={
+          <Link href="#new-recurring" className={buttonStyles({ size: "lg" })}>
+            <Plus className="size-4" />
+            New recurring
+          </Link>
+        }
+      />
 
-      <div className="grid gap-6 xl:grid-cols-[0.96fr_1.04fr]">
-        <Card variant="tint" className="space-y-5">
-          <h2 className="section-title">New rule</h2>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <Card className="space-y-5">
+          <div className="section-header">
+            <div className="space-y-2">
+              <p className="section-kicker">Active setup</p>
+              <h2 className="section-title">Recurring bookings</h2>
+            </div>
+            <Badge tone="outline">{activeRuleCount} active</Badge>
+          </div>
 
-          <RecurringRuleForm
-            redirectTo="/recurring"
-            initialCustomerId={params.customerId}
-            initialStartDate={toDateInputValue(today)}
-            customers={customers}
-            classTypes={classTypes}
-            instructors={instructors}
-          />
-        </Card>
-
-        <div className="space-y-4">
-          {rules.length ? (
-            rules.map((rule) => (
-              (() => {
+          <div className="space-y-4">
+            {rules.length ? (
+              rules.map((rule) => {
                 const generationStartDate = rule.startDate > today ? rule.startDate : today;
                 const defaultGenerationEnd = addDays(generationStartDate, 56);
                 const generationEndDate =
                   rule.endDate && rule.endDate < defaultGenerationEnd ? rule.endDate : defaultGenerationEnd;
 
                 return (
-                  <Card key={rule.id} className="space-y-5">
+                  <div key={rule.id} className="list-row space-y-5">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="space-y-3">
                         <div className="flex flex-wrap items-center gap-2">
@@ -108,9 +113,9 @@ export default async function RecurringPage({
                           </h2>
                           <p className="text-sm leading-6 text-muted">
                             {compactList([
-                              rule.classType.name,
                               rule.dayOfWeek.replaceAll("_", " "),
                               rule.startTime,
+                              rule.classType.name,
                               rule.instructor?.fullName ?? "No instructor assigned",
                             ])}
                           </p>
@@ -134,7 +139,7 @@ export default async function RecurringPage({
                     </div>
 
                     <div className="surface-inset rounded-[24px] p-4">
-                      <p className="font-semibold text-ink">Generate</p>
+                      <p className="font-semibold text-ink">Generate sessions</p>
                       <div className="mt-4">
                         <RecurringGenerationForm
                           ruleId={rule.id}
@@ -143,14 +148,31 @@ export default async function RecurringPage({
                         />
                       </div>
                     </div>
-                  </Card>
+                  </div>
                 );
-              })()
-            ))
-          ) : (
-            <div className="empty-state">No recurring rules yet.</div>
-          )}
-        </div>
+              })
+            ) : (
+              <div className="empty-state">No recurring rules yet.</div>
+            )}
+          </div>
+        </Card>
+
+        <Card
+          id="new-recurring"
+          variant="tint"
+          className="scroll-mt-28 space-y-5 self-start xl:sticky xl:top-24"
+        >
+          <h2 className="section-title">New rule</h2>
+
+          <RecurringRuleForm
+            redirectTo="/recurring"
+            initialCustomerId={params.customerId}
+            initialStartDate={toDateInputValue(today)}
+            customers={customers}
+            classTypes={classTypes}
+            instructors={instructors}
+          />
+        </Card>
       </div>
     </div>
   );

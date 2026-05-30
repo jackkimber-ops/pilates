@@ -45,7 +45,7 @@ export default async function ReportsPage({
   const startDate = new Date(`${start}T00:00:00`);
   const endDate = new Date(`${end}T23:59:59`);
 
-  const [sessionCount, attendanceCount, packageSalesSummary, singleSalesSummary, trialSalesSummary] =
+  const [sessionCount, activeCustomerCount, creditsUsedCount, packageSalesSummary] =
     await Promise.all([
       prisma.session.count({
         where: {
@@ -55,9 +55,15 @@ export default async function ReportsPage({
           },
         },
       }),
+      prisma.customer.count({
+        where: {
+          status: "ACTIVE",
+        },
+      }),
       prisma.booking.count({
         where: {
           status: "ATTENDED",
+          OR: [{ creditDeducted: true }, { singleUseConsumed: true }, { trialUseConsumed: true }],
           session: {
             startsAt: {
               gte: startDate,
@@ -69,34 +75,6 @@ export default async function ReportsPage({
       prisma.customerPackage.aggregate({
         where: {
           sourceType: "PACKAGE_SALE",
-          purchaseDate: {
-            gte: startDate,
-            lte: endDate,
-          },
-        },
-        _count: {
-          _all: true,
-        },
-        _sum: {
-          amountPaid: true,
-        },
-      }),
-      prisma.singleClassPurchase.aggregate({
-        where: {
-          purchaseDate: {
-            gte: startDate,
-            lte: endDate,
-          },
-        },
-        _count: {
-          _all: true,
-        },
-        _sum: {
-          amountPaid: true,
-        },
-      }),
-      prisma.customerTrialPackage.aggregate({
-        where: {
           purchaseDate: {
             gte: startDate,
             lte: endDate,
@@ -134,23 +112,17 @@ export default async function ReportsPage({
             <p className="stat-value">{formatNumber(sessionCount)}</p>
           </div>
           <div className="stat-shell">
-            <p className="stat-label">Attendance</p>
-            <p className="stat-value">{formatNumber(attendanceCount)}</p>
+            <p className="stat-label">Active customers</p>
+            <p className="stat-value">{formatNumber(activeCustomerCount)}</p>
+          </div>
+          <div className="stat-shell">
+            <p className="stat-label">Credits used</p>
+            <p className="stat-value">{formatNumber(creditsUsedCount)}</p>
           </div>
           <div className="stat-shell">
             <p className="stat-label">Package sales</p>
             <p className="stat-value">{formatCurrency(packageSalesSummary._sum.amountPaid?.toString() ?? "0")}</p>
             <p className="mt-2 text-sm text-muted">{packageSalesSummary._count._all} sales</p>
-          </div>
-          <div className="stat-shell">
-            <p className="stat-label">One-off sales</p>
-            <p className="stat-value">{formatCurrency(singleSalesSummary._sum.amountPaid?.toString() ?? "0")}</p>
-            <p className="mt-2 text-sm text-muted">{singleSalesSummary._count._all} sales</p>
-          </div>
-          <div className="stat-shell">
-            <p className="stat-label">Trial sales</p>
-            <p className="stat-value">{formatCurrency(trialSalesSummary._sum.amountPaid?.toString() ?? "0")}</p>
-            <p className="mt-2 text-sm text-muted">{trialSalesSummary._count._all} sales</p>
           </div>
         </div>
       </Card>

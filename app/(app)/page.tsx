@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, CircleDollarSign, Clock3, Plus, Settings2, Sparkles, Users2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import {
   DashboardLiveSessionsProvider,
   DashboardNextSessionCard,
@@ -122,34 +122,6 @@ export default async function DashboardPage() {
       }),
     ]);
 
-  const quickActions = [
-    {
-      href: "/customers/new",
-      label: "Add customer",
-      icon: Users2,
-    },
-    {
-      href: "/sales/package",
-      label: "Sell package",
-      icon: CircleDollarSign,
-    },
-    {
-      href: "/sales/trial",
-      label: "Trials",
-      icon: Sparkles,
-    },
-    {
-      href: "/calendar",
-      label: "Calendar",
-      icon: CalendarDays,
-    },
-    {
-      href: "/recurring",
-      label: "Recurring",
-      icon: Clock3,
-    },
-  ];
-
   const followUpCount = lowBalancePackages.length + expiredPackages.length;
 
   return (
@@ -165,50 +137,22 @@ export default async function DashboardPage() {
         }
       />
 
-      <section className="grid gap-6 xl:grid-cols-[1.06fr_0.94fr]">
-        <Card variant="tint" className="space-y-7 overflow-hidden">
-          <div className="space-y-3">
-            <h2 className="section-title max-w-xl">Overview</h2>
-          </div>
-
-          <DashboardSessionStats followUpCount={followUpCount} />
-
-          <div className="soft-divider" />
-
-          <div className="editorial-grid md:grid-cols-2">
-            {quickActions.map((item) => {
-              const Icon = item.icon;
-
-              return (
-                <Link key={item.href} href={item.href} prefetch={false} className="list-row group block h-full">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-3">
-                      <div className="flex size-10 items-center justify-center rounded-[18px] bg-white/72 text-accent-strong shadow-[0_14px_24px_-22px_rgba(74,56,51,0.14)]">
-                        <Icon className="size-5" />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-base font-semibold text-ink">{item.label}</p>
-                      </div>
-                    </div>
-                    <ArrowRight className="mt-1 size-4 text-muted transition-transform group-hover:translate-x-0.5" />
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Link href="/catalog" prefetch={false} className={buttonStyles({ variant: "secondary", size: "sm" })}>
-              <Settings2 className="size-4" />
-              Studio catalog
-            </Link>
-          </div>
-        </Card>
-
+      <section className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-5">
           <DashboardNextSessionCard />
+          <DashboardTodaySessionsCard />
+        </div>
 
-          <Card variant="soft" className="space-y-4">
+        <div className="space-y-5">
+          <Card variant="tint" className="space-y-5">
+            <div className="section-header">
+              <h2 className="section-title">Today</h2>
+              <Badge tone="plum">Live</Badge>
+            </div>
+            <DashboardSessionStats followUpCount={followUpCount} />
+          </Card>
+
+          <Card variant="soft" className="space-y-5">
             <div className="section-header">
               <h2 className="section-title">Follow-up</h2>
               <Badge tone="warm">Actionable</Badge>
@@ -236,8 +180,6 @@ export default async function DashboardPage() {
           </Card>
         </div>
       </section>
-
-      <DashboardTodaySessionsCard />
 
       <section className="grid gap-5 xl:grid-cols-3">
         <Card className="space-y-4">
